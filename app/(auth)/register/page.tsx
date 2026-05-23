@@ -1,0 +1,198 @@
+'use client'
+
+import React from 'react'
+import Link from 'next/link'
+import { motion } from 'framer-motion'
+import { Mail, Lock, Eye, EyeOff, User, ArrowRight } from 'lucide-react'
+import Input from '@/components/ui/Input'
+import Button from '@/components/ui/Button'
+
+export default function RegisterPage() {
+  const [fullName, setFullName] = React.useState('')
+  const [email, setEmail] = React.useState('')
+  const [password, setPassword] = React.useState('')
+  const [confirmPassword, setConfirmPassword] = React.useState('')
+  const [showPassword, setShowPassword] = React.useState(false)
+  const [isLoading, setIsLoading] = React.useState(false)
+  const [isGoogleLoading, setIsGoogleLoading] = React.useState(false)
+  const [error, setError] = React.useState('')
+  const [success, setSuccess] = React.useState(false)
+
+  const passwordStrength = React.useMemo(() => {
+    if (!password) return { level: 0, label: '' }
+    let score = 0
+    if (password.length >= 8) score++
+    if (/[A-Z]/.test(password)) score++
+    if (/[0-9]/.test(password)) score++
+    if (/[^A-Za-z0-9]/.test(password)) score++
+    const labels = ['', 'Weak', 'Fair', 'Good', 'Strong']
+    return { level: score, label: labels[score] }
+  }, [password])
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError('')
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match')
+      return
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters')
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      const { signUpWithEmail } = await import('@/lib/auth/supabase-auth')
+      await signUpWithEmail(email, password, fullName)
+      setSuccess(true)
+    } catch (err: any) {
+      setError(err?.message || 'Registration failed')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleGoogleSignUp = async () => {
+    setIsGoogleLoading(true)
+    try {
+      const { signInWithGoogle } = await import('@/lib/auth/supabase-auth')
+      await signInWithGoogle()
+    } catch (err: any) {
+      setError(err?.message || 'Google sign-up failed')
+      setIsGoogleLoading(false)
+    }
+  }
+
+  if (success) {
+    return (
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="text-center">
+        <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Mail className="w-7 h-7 text-green-600" />
+        </div>
+        <h2 className="text-2xl font-bold">Check your email</h2>
+        <p className="text-sm text-brand-gray500 mt-2 max-w-sm mx-auto">
+          We sent a verification link to <strong className="text-brand-black">{email}</strong>.
+          Click the link to activate your account.
+        </p>
+        <Link href="/login" className="btn-primary inline-flex mt-6">
+          Back to Login
+        </Link>
+      </motion.div>
+    )
+  }
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+      <div className="lg:hidden flex items-center gap-2 mb-8">
+        <div className="w-10 h-10 bg-brand-black rounded-xl flex items-center justify-center">
+          <span className="text-white font-bold text-lg">ኪ</span>
+        </div>
+        <span className="font-bold text-xl tracking-tight">ኪራይLand</span>
+      </div>
+
+      <h2 className="text-2xl font-bold tracking-tight">Create your account</h2>
+      <p className="text-sm text-brand-gray500 mt-1">Join thousands of renters and providers</p>
+
+      {error && (
+        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
+          className="mt-4 p-3 bg-red-50 border border-red-200 rounded-input text-sm text-red-700">
+          {error}
+        </motion.div>
+      )}
+
+      <div className="mt-6">
+        <Button variant="secondary" className="w-full" onClick={handleGoogleSignUp}
+          isLoading={isGoogleLoading} disabled={isLoading}>
+          <svg className="w-4 h-4" viewBox="0 0 24 24">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+          </svg>
+          Continue with Google
+        </Button>
+      </div>
+
+      <div className="flex items-center gap-3 my-6">
+        <div className="flex-1 h-px bg-brand-gray200" />
+        <span className="text-xs text-brand-gray400 font-medium">OR</span>
+        <div className="flex-1 h-px bg-brand-gray200" />
+      </div>
+
+      <form onSubmit={handleRegister} className="space-y-4">
+        <Input label="Full Name" type="text" placeholder="John Doe" value={fullName}
+          onChange={e => setFullName(e.target.value)} icon={<User className="w-4 h-4" />} required />
+
+        <Input label="Email" type="email" placeholder="you@example.com" value={email}
+          onChange={e => setEmail(e.target.value)} icon={<Mail className="w-4 h-4" />} required />
+
+        <div className="relative">
+          <Input label="Password" type={showPassword ? 'text' : 'password'} placeholder="Min. 8 characters"
+            value={password} onChange={e => setPassword(e.target.value)}
+            icon={<Lock className="w-4 h-4" />} required />
+          <button type="button" onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-[38px] text-brand-gray400 hover:text-brand-black transition-colors">
+            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+          {/* Password strength indicator */}
+          {password && (
+            <div className="mt-2 flex items-center gap-2">
+              <div className="flex-1 flex gap-1">
+                {[1, 2, 3, 4].map(i => (
+                  <div key={i} className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+                    i <= passwordStrength.level
+                      ? passwordStrength.level <= 1 ? 'bg-red-400'
+                        : passwordStrength.level <= 2 ? 'bg-amber-400'
+                        : passwordStrength.level <= 3 ? 'bg-blue-400'
+                        : 'bg-green-400'
+                      : 'bg-brand-gray200'
+                  }`} />
+                ))}
+              </div>
+              <span className={`text-xs font-medium ${
+                passwordStrength.level <= 1 ? 'text-red-500'
+                : passwordStrength.level <= 2 ? 'text-amber-500'
+                : passwordStrength.level <= 3 ? 'text-blue-500'
+                : 'text-green-500'
+              }`}>
+                {passwordStrength.label}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <Input label="Confirm Password" type="password" placeholder="Re-enter password"
+          value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
+          icon={<Lock className="w-4 h-4" />}
+          error={confirmPassword && password !== confirmPassword ? 'Passwords do not match' : undefined}
+          required />
+
+        <div className="pt-1">
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input type="checkbox" required
+              className="w-4 h-4 mt-0.5 rounded border-brand-gray300 text-brand-black focus:ring-brand-black" />
+            <span className="text-xs text-brand-gray500">
+              I agree to the{' '}
+              <Link href="/terms" className="text-brand-black font-medium hover:underline">Terms of Service</Link>
+              {' '}and{' '}
+              <Link href="/privacy" className="text-brand-black font-medium hover:underline">Privacy Policy</Link>
+            </span>
+          </label>
+        </div>
+
+        <Button type="submit" className="w-full" isLoading={isLoading} disabled={isGoogleLoading}>
+          Create Account <ArrowRight className="w-4 h-4" />
+        </Button>
+      </form>
+
+      <p className="mt-6 text-center text-sm text-brand-gray500">
+        Already have an account?{' '}
+        <Link href="/login" className="font-semibold text-brand-black hover:text-brand-gray600 transition-colors">
+          Sign In
+        </Link>
+      </p>
+    </motion.div>
+  )
+}
