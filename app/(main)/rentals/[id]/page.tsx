@@ -313,10 +313,6 @@ export default function RentalDetailPage({ params }: { params: { id: string } })
                   <span className="text-brand-gray500">Rental ID</span>
                   <span className="font-mono text-xs">{rental.id}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-brand-gray500">Exchange Rate</span>
-                  <span className="font-medium">1 ETB = ${rental.exchange_rate.toFixed(6)}</span>
-                </div>
               </div>
             </div>
           </div>

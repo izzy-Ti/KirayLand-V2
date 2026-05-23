@@ -101,7 +101,9 @@ export default function EscrowTimeline({
   const isCancelled = currentStatus === 'cancelled'
 
   const formatETB = (n: number) => `ETB ${n.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
-  const formatUSD = (n: number) => `$${n.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
+
+  const platformFeeEtb = Math.round(totalPriceEtb * 0.05 * 100) / 100
+  const providerPayoutEtb = Math.round((totalPriceEtb - platformFeeEtb) * 100) / 100
 
   return (
     <div className="w-full">
@@ -236,13 +238,11 @@ export default function EscrowTimeline({
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div>
                         <span className="text-brand-gray400">Total Held</span>
-                        <p className="font-semibold mt-0.5">{formatUSD(totalPriceUsd + depositUsd)}</p>
-                        <p className="text-brand-gray400">{formatETB(totalPriceEtb + depositEtb)}</p>
+                        <p className="font-semibold mt-0.5">{formatETB(totalPriceEtb + depositEtb)}</p>
                       </div>
                       <div>
                         <span className="text-brand-gray400">Security Deposit</span>
-                        <p className="font-semibold mt-0.5">{formatUSD(depositUsd)}</p>
-                        <p className="text-brand-gray400">{formatETB(depositEtb)}</p>
+                        <p className="font-semibold mt-0.5">{formatETB(depositEtb)}</p>
                       </div>
                     </div>
                   </motion.div>
@@ -264,15 +264,15 @@ export default function EscrowTimeline({
                     <div className="grid grid-cols-2 gap-2 text-xs">
                       <div>
                         <span className="text-green-600/70">Provider Payout</span>
-                        <p className="font-semibold text-green-800 mt-0.5">{formatUSD(providerPayoutUsd)}</p>
+                        <p className="font-semibold text-green-800 mt-0.5">{formatETB(providerPayoutEtb)}</p>
                       </div>
                       <div>
                         <span className="text-green-600/70">Platform Fee</span>
-                        <p className="font-semibold text-green-800 mt-0.5">{formatUSD(platformFeeUsd)}</p>
+                        <p className="font-semibold text-green-800 mt-0.5">{formatETB(platformFeeEtb)}</p>
                       </div>
                       <div>
                         <span className="text-green-600/70">Deposit Refunded</span>
-                        <p className="font-semibold text-green-800 mt-0.5">{formatUSD(depositUsd)}</p>
+                        <p className="font-semibold text-green-800 mt-0.5">{formatETB(depositEtb)}</p>
                       </div>
                     </div>
                   </motion.div>
@@ -297,31 +297,25 @@ export default function EscrowTimeline({
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-brand-gray500">Rental Price</span>
-            <div className="text-right">
-              <span className="font-medium">{formatUSD(totalPriceUsd)}</span>
-              <span className="text-xs text-brand-gray400 ml-2">({formatETB(totalPriceEtb)})</span>
-            </div>
+            <span className="font-medium">{formatETB(totalPriceEtb)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-brand-gray500">Security Deposit</span>
-            <div className="text-right">
-              <span className="font-medium">{formatUSD(depositUsd)}</span>
-              <span className="text-xs text-brand-gray400 ml-2">({formatETB(depositEtb)})</span>
-            </div>
+            <span className="font-medium">{formatETB(depositEtb)}</span>
           </div>
           <div className="divider my-2" />
           <div className="flex justify-between text-sm">
             <span className="text-brand-gray500">Platform Fee (5%)</span>
-            <span className="font-medium text-brand-gray600">{formatUSD(platformFeeUsd)}</span>
+            <span className="font-medium text-brand-gray600">{formatETB(platformFeeEtb)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-brand-gray500">Provider Receives (95%)</span>
-            <span className="font-medium text-green-700">{formatUSD(providerPayoutUsd)}</span>
+            <span className="font-medium text-green-700">{formatETB(providerPayoutEtb)}</span>
           </div>
           <div className="divider my-2" />
           <div className="flex justify-between text-sm font-bold">
             <span>Total Charged</span>
-            <span>{formatUSD(totalPriceUsd + depositUsd)}</span>
+            <span>{formatETB(totalPriceEtb + depositEtb)}</span>
           </div>
         </div>
       </motion.div>
