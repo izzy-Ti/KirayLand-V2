@@ -6,21 +6,28 @@ import { motion } from 'framer-motion'
 import { Mail, ArrowRight, ArrowLeft } from 'lucide-react'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
+import { useLanguage } from '@/lib/context/LanguageContext'
 
 export default function ResetPasswordPage() {
+  const { t } = useLanguage()
   const [email, setEmail] = React.useState('')
   const [newPassword, setNewPassword] = React.useState('')
   const [isLoading, setIsLoading] = React.useState(false)
   const [error, setError] = React.useState('')
-  const [sent, setSent] = React.useState(false)
   const [isResetMode, setIsResetMode] = React.useState(false)
 
-  // Check for token in URL (redirect from email)
+  // Check for recovery token or OTP-verified redirection
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash
-      if (hash.includes('type=recovery')) {
+      const searchParams = new URLSearchParams(window.location.search)
+      if (hash.includes('type=recovery') || searchParams.get('verified') === 'true') {
         setIsResetMode(true)
+      }
+      
+      const emailParam = searchParams.get('email')
+      if (emailParam) {
+        setEmail(emailParam)
       }
     }
   }, [])
@@ -32,9 +39,11 @@ export default function ResetPasswordPage() {
     try {
       const { requestPasswordReset } = await import('@/lib/auth/supabase-auth')
       await requestPasswordReset(email)
-      setSent(true)
+      
+      // Redirect to code verification page
+      window.location.href = `/verify?email=${encodeURIComponent(email)}&type=recovery`
     } catch (err: any) {
-      setError(err?.message || 'Failed to send reset email')
+      setError(err?.message || t('resetPassword.checkEmailSubtitle'))
     } finally {
       setIsLoading(false)
     }
@@ -44,7 +53,7 @@ export default function ResetPasswordPage() {
     e.preventDefault()
     setError('')
     if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters')
+      setError(t('auth.passwordMinChar'))
       return
     }
     setIsLoading(true)
@@ -62,37 +71,20 @@ export default function ResetPasswordPage() {
   if (isResetMode) {
     return (
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-        <h2 className="text-2xl font-bold tracking-tight">Set new password</h2>
-        <p className="text-sm text-brand-gray500 mt-1">Enter your new password below</p>
+        <h2 className="text-2xl font-bold tracking-tight">{t('resetPassword.setTitle')}</h2>
+        <p className="text-sm text-brand-gray500 mt-1">{t('resetPassword.setSubtitle')}</p>
 
         {error && (
           <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-input text-sm text-red-700">{error}</div>
         )}
 
         <form onSubmit={handleUpdatePassword} className="mt-6 space-y-4">
-          <Input label="New Password" type="password" placeholder="Min. 8 characters"
+          <Input label={t('resetPassword.newPasswordLabel')} type="password" placeholder={t('auth.passwordMinChar')}
             value={newPassword} onChange={e => setNewPassword(e.target.value)} required />
           <Button type="submit" className="w-full" isLoading={isLoading}>
-            Update Password <ArrowRight className="w-4 h-4" />
+            {t('resetPassword.updateBtn')} <ArrowRight className="w-4 h-4" />
           </Button>
         </form>
-      </motion.div>
-    )
-  }
-
-  if (sent) {
-    return (
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="text-center">
-        <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Mail className="w-7 h-7 text-blue-600" />
-        </div>
-        <h2 className="text-2xl font-bold">Check your email</h2>
-        <p className="text-sm text-brand-gray500 mt-2 max-w-sm mx-auto">
-          We sent a password reset link to <strong className="text-brand-black">{email}</strong>.
-        </p>
-        <Link href="/login" className="btn-secondary inline-flex mt-6">
-          <ArrowLeft className="w-4 h-4" /> Back to Login
-        </Link>
       </motion.div>
     )
   }
@@ -101,12 +93,12 @@ export default function ResetPasswordPage() {
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
       <Link href="/login"
         className="inline-flex items-center gap-1 text-sm text-brand-gray500 hover:text-brand-black mb-6 transition-colors">
-        <ArrowLeft className="w-4 h-4" /> Back to login
+        <ArrowLeft className="w-4 h-4" /> {t('common.back')}
       </Link>
 
-      <h2 className="text-2xl font-bold tracking-tight">Reset password</h2>
+      <h2 className="text-2xl font-bold tracking-tight">{t('resetPassword.requestTitle')}</h2>
       <p className="text-sm text-brand-gray500 mt-1">
-        Enter your email and we&apos;ll send a reset link
+        {t('resetPassword.requestSubtitle')}
       </p>
 
       {error && (
@@ -114,11 +106,11 @@ export default function ResetPasswordPage() {
       )}
 
       <form onSubmit={handleRequestReset} className="mt-6 space-y-4">
-        <Input label="Email" type="email" placeholder="you@example.com"
+        <Input label={t('auth.email')} type="email" placeholder="you@example.com"
           value={email} onChange={e => setEmail(e.target.value)}
           icon={<Mail className="w-4 h-4" />} required />
         <Button type="submit" className="w-full" isLoading={isLoading}>
-          Send Reset Link <ArrowRight className="w-4 h-4" />
+          {t('resetPassword.sendBtn')} <ArrowRight className="w-4 h-4" />
         </Button>
       </form>
     </motion.div>

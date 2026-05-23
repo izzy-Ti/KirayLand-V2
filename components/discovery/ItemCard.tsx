@@ -6,6 +6,7 @@ import { Heart, Star, MapPin, Eye } from 'lucide-react'
 import Link from 'next/link'
 import Badge from '@/components/ui/Badge'
 import type { Item } from '@/types/database'
+import { useLanguage } from '@/lib/context/LanguageContext'
 
 interface ItemCardProps {
   item: Item
@@ -13,11 +14,21 @@ interface ItemCardProps {
 }
 
 export default function ItemCard({ item, index = 0 }: ItemCardProps) {
+  const { t } = useLanguage()
   const [isLiked, setIsLiked] = React.useState(false)
   const [isImageLoaded, setIsImageLoaded] = React.useState(false)
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US').format(price)
+  }
+
+  const conditionLabel = (cond: string) => {
+    switch (cond) {
+      case 'new':      return t('items.new')
+      case 'like_new': return t('items.likeNew')
+      case 'good':     return t('items.good')
+      default:         return t('items.fair')
+    }
   }
 
   return (
@@ -83,9 +94,7 @@ export default function ItemCard({ item, index = 0 }: ItemCardProps) {
             {item.attributes?.condition && (
               <div className="absolute top-3 left-3">
                 <Badge variant="black">
-                  {item.attributes.condition === 'new' ? 'New' :
-                   item.attributes.condition === 'like_new' ? 'Like New' :
-                   item.attributes.condition === 'good' ? 'Good' : 'Fair'}
+                  {conditionLabel(item.attributes.condition)}
                 </Badge>
               </div>
             )}
@@ -128,7 +137,7 @@ export default function ItemCard({ item, index = 0 }: ItemCardProps) {
                 <span className="text-lg font-bold text-brand-black">
                   ETB {formatPrice(item.price_per_day_etb)}
                 </span>
-                <span className="text-xs text-brand-gray400 ml-1">/day</span>
+                <span className="text-xs text-brand-gray400 ml-1">{t('items.perDay')}</span>
               </div>
 
               {/* Hover action hint */}
@@ -137,7 +146,7 @@ export default function ItemCard({ item, index = 0 }: ItemCardProps) {
                 whileInView={{ opacity: 1, x: 0 }}
                 className="text-xs text-brand-gray400 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
               >
-                View →
+                {t('items.view')}
               </motion.span>
             </div>
           </div>

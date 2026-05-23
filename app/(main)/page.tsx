@@ -9,27 +9,29 @@ import FilterPanel from '@/components/discovery/FilterPanel'
 import ItemGrid from '@/components/discovery/ItemGrid'
 import type { Item, ItemFilters, Category } from '@/types/database'
 import { getSupabaseBrowserClient } from '@/lib/supabase'
-
-// ── Feature highlights ────────────────────────────────────
-const FEATURES = [
-  {
-    icon: Shield,
-    title: 'Smart Escrow',
-    description: 'Funds held securely until both parties verify',
-  },
-  {
-    icon: Zap,
-    title: 'Instant Booking',
-    description: 'Book items in seconds with dual-currency checkout',
-  },
-  {
-    icon: Sparkles,
-    title: 'Verified Providers',
-    description: 'Trust tiers and ratings for complete peace of mind',
-  },
-]
+import { useLanguage } from '@/lib/context/LanguageContext'
 
 export default function DiscoveryPage() {
+  const { t } = useLanguage()
+
+  const FEATURES = [
+    {
+      icon: Shield,
+      title: t('hero.featureEscrow'),
+      description: t('hero.featureEscrowDesc'),
+    },
+    {
+      icon: Zap,
+      title: t('hero.featureInstant'),
+      description: t('hero.featureInstantDesc'),
+    },
+    {
+      icon: Sparkles,
+      title: t('hero.featureVerified'),
+      description: t('hero.featureVerifiedDesc'),
+    },
+  ]
+
   const [searchQuery, setSearchQuery] = React.useState('')
   const [filters, setFilters] = React.useState<ItemFilters>({})
   const [isFilterOpen, setIsFilterOpen] = React.useState(true)
@@ -142,8 +144,8 @@ export default function DiscoveryPage() {
               transition={{ duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
             >
               <h1 className="text-display-lg md:text-display-xl font-bold text-brand-black tracking-tight text-balance">
-                Rent Anything.{' '}
-                <span className="text-brand-gray400">From Anyone.</span>
+                {t('hero.title')}{' '}
+                <span className="text-brand-gray400">{t('hero.titleSpan')}</span>
               </h1>
             </motion.div>
 
@@ -153,8 +155,7 @@ export default function DiscoveryPage() {
               transition={{ duration: 0.6, delay: 0.15 }}
               className="mt-4 text-lg text-brand-gray500 max-w-xl mx-auto text-pretty"
             >
-              Ethiopia&apos;s trusted peer-to-peer marketplace — backed by smart escrow 
-              and verified providers. Browse thousands of items near you.
+              {t('hero.subtitle')}
             </motion.p>
 
             <motion.div
@@ -166,6 +167,7 @@ export default function DiscoveryPage() {
               <SearchBar
                 value={searchQuery}
                 onChange={setSearchQuery}
+                placeholder={t('hero.searchPlaceholder')}
               />
             </motion.div>
 
@@ -215,21 +217,21 @@ export default function DiscoveryPage() {
               <div>
                 <h2 className="text-lg font-semibold">
                   {filters.category_slug
-                    ? categories.find(c => c.slug === filters.category_slug)?.name || 'Results'
-                    : 'All Items'
+                    ? categories.find(c => c.slug === filters.category_slug)?.name || t('discovery.results')
+                    : t('discovery.allItems')
                   }
                 </h2>
                 <p className="text-sm text-brand-gray500 mt-0.5">
-                  {filteredItems.length} {filteredItems.length === 1 ? 'item' : 'items'} available
+                  {filteredItems.length} {filteredItems.length === 1 ? t('discovery.itemAvailable') : t('discovery.itemsAvailable')}
                 </p>
               </div>
 
               <Link
-                href="/explore"
+                href="/"
                 className="hidden sm:flex items-center gap-1 text-sm font-medium text-brand-gray500
                   hover:text-brand-black transition-colors group"
               >
-                View all
+                {t('footer.browseItems')}
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
               </Link>
             </div>

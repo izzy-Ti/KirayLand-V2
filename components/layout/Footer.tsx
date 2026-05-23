@@ -1,7 +1,12 @@
+'use client'
+
 import Link from 'next/link'
 import { Github, Twitter } from 'lucide-react'
+import { useLanguage } from '@/lib/context/LanguageContext'
 
 export default function Footer() {
+  const { t } = useLanguage()
+
   return (
     <footer className="border-t border-brand-gray200 bg-brand-gray50">
       <div className="page-container py-16">
@@ -15,38 +20,68 @@ export default function Footer() {
               <span className="font-bold text-lg tracking-tight">ኪራይLand</span>
             </div>
             <p className="text-sm text-brand-gray500 leading-relaxed max-w-xs">
-              Ethiopia&apos;s trusted peer-to-peer rental marketplace. 
-              Rent anything, from anyone — with escrow protection.
+              {t('footer.tagline')}
             </p>
           </div>
 
           {/* Marketplace */}
           <div>
-            <h4 className="font-semibold text-sm mb-4">Marketplace</h4>
+            <h4 className="font-semibold text-sm mb-4">{t('footer.marketplace')}</h4>
             <ul className="space-y-2.5">
-              <li><Link href="/explore" className="text-sm text-brand-gray500 hover:text-brand-black transition-colors">Browse Items</Link></li>
-              <li><Link href="/list" className="text-sm text-brand-gray500 hover:text-brand-black transition-colors">List an Item</Link></li>
-              <li><Link href="/categories" className="text-sm text-brand-gray500 hover:text-brand-black transition-colors">Categories</Link></li>
+              <li>
+                <Link href="/" className="text-sm text-brand-gray500 hover:text-brand-black transition-colors">
+                  {t('footer.browseItems')}
+                </Link>
+              </li>
+              <li>
+                <Link href="/list" className="text-sm text-brand-gray500 hover:text-brand-black transition-colors">
+                  {t('footer.listItem')}
+                </Link>
+              </li>
             </ul>
           </div>
 
           {/* Company */}
           <div>
-            <h4 className="font-semibold text-sm mb-4">Company</h4>
+            <h4 className="font-semibold text-sm mb-4">{t('footer.company')}</h4>
             <ul className="space-y-2.5">
-              <li><Link href="/about" className="text-sm text-brand-gray500 hover:text-brand-black transition-colors">About</Link></li>
-              <li><Link href="/safety" className="text-sm text-brand-gray500 hover:text-brand-black transition-colors">Trust & Safety</Link></li>
-              <li><Link href="/help" className="text-sm text-brand-gray500 hover:text-brand-black transition-colors">Help Center</Link></li>
+              <li>
+                <Link href="/" className="text-sm text-brand-gray500 hover:text-brand-black transition-colors">
+                  {t('footer.about')}
+                </Link>
+              </li>
+              <li>
+                <Link href="/" className="text-sm text-brand-gray500 hover:text-brand-black transition-colors">
+                  {t('footer.safety')}
+                </Link>
+              </li>
+              <li>
+                <Link href="/" className="text-sm text-brand-gray500 hover:text-brand-black transition-colors">
+                  {t('footer.help')}
+                </Link>
+              </li>
             </ul>
           </div>
 
           {/* Legal */}
           <div>
-            <h4 className="font-semibold text-sm mb-4">Legal</h4>
+            <h4 className="font-semibold text-sm mb-4">{t('footer.legal')}</h4>
             <ul className="space-y-2.5">
-              <li><Link href="/terms" className="text-sm text-brand-gray500 hover:text-brand-black transition-colors">Terms of Service</Link></li>
-              <li><Link href="/privacy" className="text-sm text-brand-gray500 hover:text-brand-black transition-colors">Privacy Policy</Link></li>
-              <li><Link href="/escrow-policy" className="text-sm text-brand-gray500 hover:text-brand-black transition-colors">Escrow Policy</Link></li>
+              <li>
+                <Link href="/" className="text-sm text-brand-gray500 hover:text-brand-black transition-colors">
+                  {t('footer.terms')}
+                </Link>
+              </li>
+              <li>
+                <Link href="/" className="text-sm text-brand-gray500 hover:text-brand-black transition-colors">
+                  {t('footer.privacy')}
+                </Link>
+              </li>
+              <li>
+                <Link href="/" className="text-sm text-brand-gray500 hover:text-brand-black transition-colors">
+                  {t('footer.escrowPolicy')}
+                </Link>
+              </li>
             </ul>
           </div>
         </div>

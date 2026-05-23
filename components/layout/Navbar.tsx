@@ -5,9 +5,10 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Menu, X, User, MessageSquare, Package,
-  PlusCircle, LogOut, Bell, ChevronDown
+  PlusCircle, LogOut, ChevronDown, Globe
 } from 'lucide-react'
 import { getSupabaseBrowserClient } from '@/lib/supabase'
+import { useLanguage } from '@/lib/context/LanguageContext'
 
 interface NavbarProps {
   user?: { full_name: string; avatar_url?: string; email: string } | null
@@ -16,7 +17,16 @@ interface NavbarProps {
 export default function Navbar({ user: initialUser }: NavbarProps) {
   const [isMenuOpen, setIsMenuOpen] = React.useState(false)
   const [isProfileOpen, setIsProfileOpen] = React.useState(false)
+  const [isLangOpen, setIsLangOpen] = React.useState(false)
   const [user, setUser] = React.useState(initialUser || null)
+  
+  const { language, setLanguage, t } = useLanguage()
+
+  const languages = [
+    { code: 'en', label: 'English', short: 'EN' },
+    { code: 'am', label: 'አማርኛ', short: 'አማ' },
+    { code: 'om', label: 'Oromoo', short: 'ORM' },
+  ]
 
   React.useEffect(() => {
     const supabase = getSupabaseBrowserClient()
@@ -74,7 +84,7 @@ export default function Navbar({ user: initialUser }: NavbarProps) {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-gray400" />
             <input
               type="text"
-              placeholder="Search items to rent..."
+              placeholder={t('nav.searchPlaceholder')}
               className="w-full pl-10 pr-4 py-2.5 bg-brand-gray50 border border-brand-gray200 rounded-pill
                 text-sm placeholder:text-brand-gray400 focus:outline-none focus:border-brand-black
                 focus:ring-2 focus:ring-brand-black/10 transition-all duration-200"
@@ -85,12 +95,54 @@ export default function Navbar({ user: initialUser }: NavbarProps) {
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-1">
           <Link
-            href="/explore"
+            href="/"
             className="px-4 py-2 text-sm font-medium text-brand-gray600 hover:text-brand-black
               hover:bg-brand-gray50 rounded-button transition-all duration-200"
           >
-            Explore
+            {t('nav.explore')}
           </Link>
+
+          {/* Desktop Language Selector */}
+          <div className="relative mr-1">
+            <button
+              onClick={() => setIsLangOpen(!isLangOpen)}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-brand-gray600 hover:text-brand-black hover:bg-brand-gray50 rounded-button transition-all duration-200"
+            >
+              <Globe className="w-4 h-4 text-brand-gray400" />
+              <span>{languages.find(l => l.code === language)?.short}</span>
+              <ChevronDown className={`w-3 h-3 text-brand-gray400 transition-transform duration-200 ${isLangOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            <AnimatePresence>
+              {isLangOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                  transition={{ duration: 0.12 }}
+                  className="absolute right-0 top-full mt-2 w-32 bg-brand-white border border-brand-gray200
+                    rounded-card shadow-card-xl py-1 overflow-hidden z-50"
+                >
+                  {languages.map(lang => (
+                    <button
+                      key={lang.code}
+                      onClick={() => {
+                        setLanguage(lang.code as any)
+                        setIsLangOpen(false)
+                      }}
+                      className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                        language === lang.code
+                          ? 'bg-brand-gray100 text-brand-black font-semibold'
+                          : 'text-brand-gray600 hover:bg-brand-gray50 hover:text-brand-black'
+                      }`}
+                    >
+                      {lang.label}
+                    </button>
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
           {user ? (
             <>
@@ -100,16 +152,12 @@ export default function Navbar({ user: initialUser }: NavbarProps) {
                   hover:bg-brand-gray50 rounded-button transition-all duration-200 flex items-center gap-1.5"
               >
                 <PlusCircle className="w-4 h-4" />
-                List Item
+                {t('nav.listItem')}
               </Link>
 
               <Link href="/messages" className="relative p-2 text-brand-gray500 hover:text-brand-black transition-colors">
                 <MessageSquare className="w-5 h-5" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-danger rounded-full" />
-              </Link>
-
-              <Link href="/notifications" className="p-2 text-brand-gray500 hover:text-brand-black transition-colors">
-                <Bell className="w-5 h-5" />
               </Link>
 
               {/* Profile Dropdown */}
@@ -143,14 +191,14 @@ export default function Navbar({ user: initialUser }: NavbarProps) {
                         <p className="text-xs text-brand-gray500 truncate">{user.email}</p>
                       </div>
                       <Link href="/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm text-brand-gray600 hover:bg-brand-gray50 hover:text-brand-black transition-colors">
-                        <User className="w-4 h-4" /> Profile
+                        <User className="w-4 h-4" /> {t('nav.profile')}
                       </Link>
                       <Link href="/rentals" className="flex items-center gap-3 px-4 py-2.5 text-sm text-brand-gray600 hover:bg-brand-gray50 hover:text-brand-black transition-colors">
-                        <Package className="w-4 h-4" /> My Rentals
+                        <Package className="w-4 h-4" /> {t('nav.myRentals')}
                       </Link>
                       <div className="border-t border-brand-gray100 mt-1">
                         <button onClick={handleSignOut} className="flex items-center gap-3 px-4 py-2.5 text-sm text-danger hover:bg-red-50 w-full transition-colors">
-                          <LogOut className="w-4 h-4" /> Sign Out
+                          <LogOut className="w-4 h-4" /> {t('nav.signOut')}
                         </button>
                       </div>
                     </motion.div>
@@ -161,10 +209,10 @@ export default function Navbar({ user: initialUser }: NavbarProps) {
           ) : (
             <div className="flex items-center gap-2 ml-2">
               <Link href="/login" className="btn-ghost text-sm py-2 px-4">
-                Log In
+                {t('nav.logIn')}
               </Link>
               <Link href="/register" className="btn-primary text-sm py-2 px-5">
-                Sign Up
+                {t('nav.signUp')}
               </Link>
             </div>
           )}
@@ -195,33 +243,54 @@ export default function Navbar({ user: initialUser }: NavbarProps) {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-gray400" />
                 <input
                   type="text"
-                  placeholder="Search items..."
+                  placeholder={t('nav.searchPlaceholder')}
                   className="input-base pl-10 rounded-pill"
                 />
               </div>
 
-              <Link href="/explore" className="block px-4 py-3 text-sm font-medium rounded-input hover:bg-brand-gray50 transition-colors">
-                Explore
+              {/* Mobile Language Switches */}
+              <div className="flex items-center gap-2 px-4 py-2 border border-brand-gray200 rounded-input bg-brand-gray50">
+                <Globe className="w-4 h-4 text-brand-gray400" />
+                <span className="text-xs font-semibold text-brand-gray500 mr-2">Language:</span>
+                <div className="flex gap-1.5 flex-1">
+                  {languages.map(lang => (
+                    <button
+                      key={lang.code}
+                      onClick={() => setLanguage(lang.code as any)}
+                      className={`flex-1 text-center py-1 text-xs font-bold rounded-pill border transition-all ${
+                        language === lang.code
+                          ? 'bg-brand-black border-brand-black text-white'
+                          : 'bg-white border-brand-gray200 text-brand-gray600'
+                      }`}
+                    >
+                      {lang.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <Link href="/" className="block px-4 py-3 text-sm font-medium rounded-input hover:bg-brand-gray50 transition-colors">
+                {t('nav.explore')}
               </Link>
               {user ? (
                 <>
                   <Link href="/list" className="block px-4 py-3 text-sm font-medium rounded-input hover:bg-brand-gray50 transition-colors">
-                    List an Item
+                    {t('nav.listItem')}
                   </Link>
                   <Link href="/messages" className="block px-4 py-3 text-sm font-medium rounded-input hover:bg-brand-gray50 transition-colors">
-                    Messages
+                    {t('chat.title')}
                   </Link>
                   <Link href="/rentals" className="block px-4 py-3 text-sm font-medium rounded-input hover:bg-brand-gray50 transition-colors">
-                    My Rentals
+                    {t('nav.myRentals')}
                   </Link>
                   <Link href="/profile" className="block px-4 py-3 text-sm font-medium rounded-input hover:bg-brand-gray50 transition-colors">
-                    Profile
+                    {t('nav.profile')}
                   </Link>
                 </>
               ) : (
                 <div className="flex gap-3 pt-2">
-                  <Link href="/login" className="btn-secondary flex-1 text-sm justify-center">Log In</Link>
-                  <Link href="/register" className="btn-primary flex-1 text-sm justify-center">Sign Up</Link>
+                  <Link href="/login" className="btn-secondary flex-1 text-sm justify-center">{t('nav.logIn')}</Link>
+                  <Link href="/register" className="btn-primary flex-1 text-sm justify-center">{t('nav.signUp')}</Link>
                 </div>
               )}
             </div>

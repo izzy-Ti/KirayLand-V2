@@ -6,8 +6,10 @@ import { motion } from 'framer-motion'
 import { Mail, Lock, Eye, EyeOff, User, ArrowRight } from 'lucide-react'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
+import { useLanguage } from '@/lib/context/LanguageContext'
 
 export default function RegisterPage() {
+  const { t } = useLanguage()
   const [fullName, setFullName] = React.useState('')
   const [email, setEmail] = React.useState('')
   const [password, setPassword] = React.useState('')
@@ -16,7 +18,6 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = React.useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = React.useState(false)
   const [error, setError] = React.useState('')
-  const [success, setSuccess] = React.useState(false)
 
   const passwordStrength = React.useMemo(() => {
     if (!password) return { level: 0, label: '' }
@@ -34,11 +35,11 @@ export default function RegisterPage() {
     setError('')
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match')
+      setError(t('auth.passwordMismatch'))
       return
     }
     if (password.length < 8) {
-      setError('Password must be at least 8 characters')
+      setError(t('auth.passwordMinChar'))
       return
     }
 
@@ -46,10 +47,10 @@ export default function RegisterPage() {
     try {
       const { signUpWithEmail } = await import('@/lib/auth/supabase-auth')
       await signUpWithEmail(email, password, fullName)
-      setSuccess(true)
+      // Redirect to the dynamic 6-digit OTP verification page
+      window.location.href = `/verify?email=${encodeURIComponent(email)}&type=signup`
     } catch (err: any) {
       setError(err?.message || 'Registration failed')
-    } finally {
       setIsLoading(false)
     }
   }
@@ -65,24 +66,6 @@ export default function RegisterPage() {
     }
   }
 
-  if (success) {
-    return (
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="text-center">
-        <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Mail className="w-7 h-7 text-green-600" />
-        </div>
-        <h2 className="text-2xl font-bold">Check your email</h2>
-        <p className="text-sm text-brand-gray500 mt-2 max-w-sm mx-auto">
-          We sent a verification link to <strong className="text-brand-black">{email}</strong>.
-          Click the link to activate your account.
-        </p>
-        <Link href="/login" className="btn-primary inline-flex mt-6">
-          Back to Login
-        </Link>
-      </motion.div>
-    )
-  }
-
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
       <div className="lg:hidden flex items-center gap-2 mb-8">
@@ -92,8 +75,8 @@ export default function RegisterPage() {
         <span className="font-bold text-xl tracking-tight">ኪራይLand</span>
       </div>
 
-      <h2 className="text-2xl font-bold tracking-tight">Create your account</h2>
-      <p className="text-sm text-brand-gray500 mt-1">Join thousands of renters and providers</p>
+      <h2 className="text-2xl font-bold tracking-tight">{t('auth.signUpTitle')}</h2>
+      <p className="text-sm text-brand-gray500 mt-1">{t('auth.signUpSubtitle')}</p>
 
       {error && (
         <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }}
@@ -111,25 +94,25 @@ export default function RegisterPage() {
             <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
           </svg>
-          Continue with Google
+          {t('auth.googleAuth')}
         </Button>
       </div>
 
       <div className="flex items-center gap-3 my-6">
         <div className="flex-1 h-px bg-brand-gray200" />
-        <span className="text-xs text-brand-gray400 font-medium">OR</span>
+        <span className="text-xs text-brand-gray400 font-medium">{t('auth.or')}</span>
         <div className="flex-1 h-px bg-brand-gray200" />
       </div>
 
       <form onSubmit={handleRegister} className="space-y-4">
-        <Input label="Full Name" type="text" placeholder="John Doe" value={fullName}
+        <Input label={t('auth.fullName')} type="text" placeholder="John Doe" value={fullName}
           onChange={e => setFullName(e.target.value)} icon={<User className="w-4 h-4" />} required />
 
-        <Input label="Email" type="email" placeholder="you@example.com" value={email}
+        <Input label={t('auth.email')} type="email" placeholder="you@example.com" value={email}
           onChange={e => setEmail(e.target.value)} icon={<Mail className="w-4 h-4" />} required />
 
         <div className="relative">
-          <Input label="Password" type={showPassword ? 'text' : 'password'} placeholder="Min. 8 characters"
+          <Input label={t('auth.password')} type={showPassword ? 'text' : 'password'} placeholder={t('auth.passwordMinChar')}
             value={password} onChange={e => setPassword(e.target.value)}
             icon={<Lock className="w-4 h-4" />} required />
           <button type="button" onClick={() => setShowPassword(!showPassword)}
@@ -163,10 +146,10 @@ export default function RegisterPage() {
           )}
         </div>
 
-        <Input label="Confirm Password" type="password" placeholder="Re-enter password"
+        <Input label={t('auth.confirmPassword')} type="password" placeholder="Re-enter password"
           value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)}
           icon={<Lock className="w-4 h-4" />}
-          error={confirmPassword && password !== confirmPassword ? 'Passwords do not match' : undefined}
+          error={confirmPassword && password !== confirmPassword ? t('auth.passwordMismatch') : undefined}
           required />
 
         <div className="pt-1">
@@ -174,23 +157,20 @@ export default function RegisterPage() {
             <input type="checkbox" required
               className="w-4 h-4 mt-0.5 rounded border-brand-gray300 text-brand-black focus:ring-brand-black" />
             <span className="text-xs text-brand-gray500">
-              I agree to the{' '}
-              <Link href="/terms" className="text-brand-black font-medium hover:underline">Terms of Service</Link>
-              {' '}and{' '}
-              <Link href="/privacy" className="text-brand-black font-medium hover:underline">Privacy Policy</Link>
+              {t('auth.agreeTerms')}
             </span>
           </label>
         </div>
 
         <Button type="submit" className="w-full" isLoading={isLoading} disabled={isGoogleLoading}>
-          Create Account <ArrowRight className="w-4 h-4" />
+          {t('auth.registerBtn')} <ArrowRight className="w-4 h-4" />
         </Button>
       </form>
 
       <p className="mt-6 text-center text-sm text-brand-gray500">
-        Already have an account?{' '}
+        {t('auth.alreadyHaveAccount')}{' '}
         <Link href="/login" className="font-semibold text-brand-black hover:text-brand-gray600 transition-colors">
-          Sign In
+          {t('nav.logIn')}
         </Link>
       </p>
     </motion.div>

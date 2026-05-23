@@ -2,10 +2,11 @@
 
 import React from 'react'
 import { motion } from 'framer-motion'
-import { Send, Image, Paperclip } from 'lucide-react'
+import { Send, Paperclip } from 'lucide-react'
 import MessageBubble from './MessageBubble'
 import type { Message } from '@/types/database'
 import { getSupabaseBrowserClient } from '@/lib/supabase'
+import { useLanguage } from '@/lib/context/LanguageContext'
 
 interface ChatRoomProps {
   rentalId: string
@@ -14,6 +15,7 @@ interface ChatRoomProps {
 }
 
 export default function ChatRoom({ rentalId, currentUserId, otherUser }: ChatRoomProps) {
+  const { t } = useLanguage()
   const [messages, setMessages] = React.useState<Message[]>([])
   const [newMessage, setNewMessage] = React.useState('')
   const [isSending, setIsSending] = React.useState(false)
@@ -115,7 +117,7 @@ export default function ChatRoom({ rentalId, currentUserId, otherUser }: ChatRoo
         </div>
         <div>
           <h4 className="font-semibold text-sm">{otherUser.full_name}</h4>
-          <p className="text-xs text-brand-gray500">Rental conversation</p>
+          <p className="text-xs text-brand-gray500">{t('chat.rentalConversation')}</p>
         </div>
       </div>
 
@@ -123,7 +125,7 @@ export default function ChatRoom({ rentalId, currentUserId, otherUser }: ChatRoo
       <div className="flex-1 overflow-y-auto px-5 py-4 space-y-1 no-scrollbar bg-white">
         {messages.length === 0 && (
           <div className="flex items-center justify-center h-full">
-            <p className="text-sm text-brand-gray400">No messages yet. Say hello!</p>
+            <p className="text-sm text-brand-gray400">{t('chat.noMessages')}</p>
           </div>
         )}
 
@@ -157,7 +159,7 @@ export default function ChatRoom({ rentalId, currentUserId, otherUser }: ChatRoo
             value={newMessage}
             onChange={e => setNewMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Type a message..."
+            placeholder={t('chat.typeMessage')}
             className="flex-1 px-4 py-2.5 bg-brand-gray50 border border-brand-gray200 rounded-pill
               text-sm placeholder:text-brand-gray400
               focus:outline-none focus:border-brand-black focus:ring-1 focus:ring-brand-black/10

@@ -11,8 +11,10 @@ import Input from '@/components/ui/Input'
 import Badge from '@/components/ui/Badge'
 import Avatar from '@/components/ui/Avatar'
 import { getSupabaseBrowserClient } from '@/lib/supabase'
+import { useLanguage } from '@/lib/context/LanguageContext'
 
 export default function ProfilePage() {
+  const { t } = useLanguage()
   const [isEditing, setIsEditing] = React.useState(false)
   const [profile, setProfile] = React.useState<any>(null)
   const [rentals, setRentals] = React.useState<any[]>([])
@@ -45,9 +47,7 @@ export default function ProfilePage() {
         .or(`provider_id.eq.${user.id},consumer_id.eq.${user.id}`)
         .order('created_at', { ascending: false })
       
-      if (rentalsData) {
-        setRentals(rentalsData)
-      }
+      if (rentalsData) setRentals(rentalsData)
       setIsLoading(false)
     }
     loadProfile()
@@ -57,7 +57,6 @@ export default function ProfilePage() {
     const supabase = getSupabaseBrowserClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    
     await supabase.from('profiles').update(formData).eq('id', user.id)
     setProfile((prev: any) => ({ ...prev, ...formData }))
     setIsEditing(false)
@@ -69,13 +68,14 @@ export default function ProfilePage() {
   }
 
   const trustColors: Record<string, 'neutral'|'info'|'success'|'black'> = {
-    new: 'neutral',
-    verified: 'info',
-    trusted: 'success',
-    premium: 'black',
+    new: 'neutral', verified: 'info', trusted: 'success', premium: 'black',
   }
 
-  if (isLoading) return <div className="page-container py-20 text-center"><div className="w-8 h-8 border-4 border-brand-black border-t-transparent rounded-full animate-spin mx-auto"></div></div>
+  if (isLoading) return (
+    <div className="page-container py-20 text-center">
+      <div className="w-8 h-8 border-4 border-brand-black border-t-transparent rounded-full animate-spin mx-auto" />
+    </div>
+  )
   if (!profile) return null
 
   return (
@@ -111,18 +111,18 @@ export default function ProfilePage() {
             <div className="space-y-2.5 text-left">
               <div className="flex items-center gap-3">
                 <CheckCircle2 className={`w-4 h-4 ${profile.is_email_verified ? 'text-green-500' : 'text-brand-gray300'}`} />
-                <span className="text-sm text-brand-gray600">Email verified</span>
+                <span className="text-sm text-brand-gray600">{t('profile.emailVerified')}</span>
               </div>
               <div className="flex items-center gap-3">
                 <CheckCircle2 className={`w-4 h-4 ${profile.is_phone_verified ? 'text-green-500' : 'text-brand-gray300'}`} />
-                <span className="text-sm text-brand-gray600">Phone verified</span>
+                <span className="text-sm text-brand-gray600">{t('profile.phoneVerified')}</span>
               </div>
               <div className="flex items-center gap-3">
                 <CheckCircle2 className={`w-4 h-4 ${profile.is_id_verified ? 'text-green-500' : 'text-brand-gray300'}`} />
                 <span className="text-sm text-brand-gray600">
-                  ID verified
+                  {t('profile.idVerified')}
                   {!profile.is_id_verified && (
-                    <button className="ml-2 text-xs text-blue-600 hover:underline">Verify now</button>
+                    <button className="ml-2 text-xs text-blue-600 hover:underline">{t('profile.verifyNow')}</button>
                   )}
                 </span>
               </div>
@@ -132,18 +132,20 @@ export default function ProfilePage() {
 
             {/* Wallet */}
             <div className="p-4 bg-brand-gray50 rounded-card">
-              <p className="text-xs text-brand-gray500">Wallet Balance</p>
+              <p className="text-xs text-brand-gray500">{t('profile.walletBalance')}</p>
               <p className="text-2xl font-bold mt-1">
-                ETB {profile.wallet_balance_etb ? profile.wallet_balance_etb.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '0.00'}
+                ETB {profile.wallet_balance_etb
+                  ? profile.wallet_balance_etb.toLocaleString('en-US', { minimumFractionDigits: 2 })
+                  : '0.00'}
               </p>
             </div>
 
             <p className="text-xs text-brand-gray400 mt-4">
-              Member since {new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              {t('profile.memberSince')} {new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </p>
 
             <button onClick={handleSignOut} className="flex items-center gap-2 mx-auto mt-4 text-sm text-danger hover:underline">
-              <LogOut className="w-4 h-4" /> Sign Out
+              <LogOut className="w-4 h-4" /> {t('profile.signOut')}
             </button>
           </motion.div>
         </div>
@@ -154,25 +156,28 @@ export default function ProfilePage() {
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
             className="card p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold">Personal Information</h3>
+              <h3 className="font-semibold">{t('profile.personalInfo')}</h3>
               <Button variant="ghost" size="sm" onClick={() => setIsEditing(!isEditing)}>
-                <Edit3 className="w-4 h-4" /> {isEditing ? 'Cancel' : 'Edit'}
+                <Edit3 className="w-4 h-4" /> {isEditing ? t('profile.cancel') : t('profile.edit')}
               </Button>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input label="Full Name" value={isEditing ? formData.full_name : profile.full_name} disabled={!isEditing}
-                icon={<User className="w-4 h-4" />} onChange={e => setFormData({ ...formData, full_name: e.target.value })} />
-              <Input label="Email" value={profile.email || ''} disabled
+              <Input label={t('profile.fullName')} value={isEditing ? formData.full_name : profile.full_name}
+                disabled={!isEditing} icon={<User className="w-4 h-4" />}
+                onChange={e => setFormData({ ...formData, full_name: e.target.value })} />
+              <Input label={t('profile.email')} value={profile.email || ''} disabled
                 icon={<Mail className="w-4 h-4" />} onChange={() => {}} />
-              <Input label="Phone" value={isEditing ? formData.phone : (profile.phone || '')} disabled={!isEditing}
-                icon={<Phone className="w-4 h-4" />} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
-              <Input label="City" value={isEditing ? formData.city : (profile.city || '')} disabled={!isEditing}
-                icon={<MapPin className="w-4 h-4" />} onChange={e => setFormData({ ...formData, city: e.target.value })} />
+              <Input label={t('profile.phone')} value={isEditing ? formData.phone : (profile.phone || '')}
+                disabled={!isEditing} icon={<Phone className="w-4 h-4" />}
+                onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+              <Input label={t('profile.city')} value={isEditing ? formData.city : (profile.city || '')}
+                disabled={!isEditing} icon={<MapPin className="w-4 h-4" />}
+                onChange={e => setFormData({ ...formData, city: e.target.value })} />
             </div>
 
             <div className="mt-4">
-              <label className="block text-sm font-medium text-brand-gray700 mb-1.5">Bio</label>
+              <label className="block text-sm font-medium text-brand-gray700 mb-1.5">{t('profile.bio')}</label>
               <textarea
                 value={isEditing ? formData.bio : (profile.bio || '')}
                 disabled={!isEditing}
@@ -184,7 +189,7 @@ export default function ProfilePage() {
 
             {isEditing && (
               <div className="flex justify-end mt-4">
-                <Button onClick={handleSave}>Save Changes</Button>
+                <Button onClick={handleSave}>{t('profile.saveChanges')}</Button>
               </div>
             )}
           </motion.div>
@@ -193,14 +198,13 @@ export default function ProfilePage() {
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
             className="card p-6">
             <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <Package className="w-4 h-4 text-brand-gray500" /> Recent Rentals
+              <Package className="w-4 h-4 text-brand-gray500" /> {t('profile.recentRentals')}
             </h3>
             <div className="space-y-3">
-              {rentals.length === 0 && <p className="text-sm text-brand-gray500">No recent rentals found.</p>}
+              {rentals.length === 0 && <p className="text-sm text-brand-gray500">{t('profile.noRentals')}</p>}
               {rentals.map(r => (
                 <a key={r.id} href={`/rentals/${r.id}`}
-                  className="flex items-center justify-between p-3 bg-brand-gray50 rounded-lg
-                    hover:bg-brand-gray100 transition-colors">
+                  className="flex items-center justify-between p-3 bg-brand-gray50 rounded-lg hover:bg-brand-gray100 transition-colors">
                   <div>
                     <p className="text-sm font-medium">{r.item?.title}</p>
                     <p className="text-xs text-brand-gray500">{r.start_date}</p>
@@ -220,23 +224,23 @@ export default function ProfilePage() {
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}
             className="card p-6">
             <h3 className="font-semibold mb-4 flex items-center gap-2">
-              <Shield className="w-4 h-4 text-brand-gray500" /> Security
+              <Shield className="w-4 h-4 text-brand-gray500" /> {t('profile.security')}
             </h3>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium">Password</p>
-                  <p className="text-xs text-brand-gray500">Update your account password</p>
+                  <p className="text-sm font-medium">{t('profile.password')}</p>
+                  <p className="text-xs text-brand-gray500">{t('profile.passwordDesc')}</p>
                 </div>
-                <Button variant="secondary" size="sm">Change</Button>
+                <Button variant="secondary" size="sm">{t('profile.change')}</Button>
               </div>
               <div className="divider" />
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium">Two-Factor Authentication</p>
-                  <p className="text-xs text-brand-gray500">Add an extra layer of security</p>
+                  <p className="text-sm font-medium">{t('profile.twoFactor')}</p>
+                  <p className="text-xs text-brand-gray500">{t('profile.twoFactorDesc')}</p>
                 </div>
-                <Button variant="secondary" size="sm">Enable</Button>
+                <Button variant="secondary" size="sm">{t('profile.enable')}</Button>
               </div>
             </div>
           </motion.div>

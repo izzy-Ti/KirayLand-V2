@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import {
   ArrowLeft, Star, MapPin, Shield, Clock, Eye,
   Heart, Share2, MessageSquare, Calendar, Tag,
-  ChevronRight, User, CheckCircle2
+  ChevronRight, CheckCircle2
 } from 'lucide-react'
 import Link from 'next/link'
 import ImageGallery from '@/components/items/ImageGallery'
@@ -14,8 +14,10 @@ import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import Avatar from '@/components/ui/Avatar'
 import { getSupabaseBrowserClient } from '@/lib/supabase'
+import { useLanguage } from '@/lib/context/LanguageContext'
 
 export default function ItemDetailPage({ params }: { params: { id: string } }) {
+  const { t } = useLanguage()
   const [item, setItem] = React.useState<any>(null)
   const [bookedDates, setBookedDates] = React.useState<any[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
@@ -84,7 +86,7 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
       }
 
       if (user.id === item.provider_id) {
-        alert("You cannot rent your own item!")
+        alert(t('itemDetail.cannotRentOwnItemAlert'))
         setIsBooking(false)
         return
       }
@@ -114,9 +116,18 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
       }
     } catch (err: any) {
       console.error(err)
-      alert('An unexpected error occurred during booking: ' + err.message)
+      alert(t('itemDetail.unexpectedCheckoutError') + err.message)
     } finally {
       setIsBooking(false)
+    }
+  }
+
+  const conditionLabel = (cond: string) => {
+    switch (cond) {
+      case 'new':      return t('items.new')
+      case 'like_new': return t('items.likeNew')
+      case 'good':     return t('items.good')
+      default:         return t('items.fair')
     }
   }
 
@@ -125,7 +136,7 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-brand-gray500 mb-4">
         <Link href="/" className="hover:text-brand-black transition-colors flex items-center gap-1">
-          <ArrowLeft className="w-4 h-4" /> Back
+          <ArrowLeft className="w-4 h-4" /> {t('common.back')}
         </Link>
         {item._parentCategory && (
           <>
@@ -155,10 +166,12 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="black">
-                    {item.attributes?.condition === 'like_new' ? 'Like New' : item.attributes?.condition}
-                  </Badge>
-                  <Badge variant="success" dot>Available</Badge>
+                  {item.attributes?.condition && (
+                    <Badge variant="black">
+                      {conditionLabel(item.attributes.condition)}
+                    </Badge>
+                  )}
+                  <Badge variant="success" dot>{t('itemDetail.available')}</Badge>
                 </div>
                 <h1 className="text-2xl font-bold tracking-tight">{item.title}</h1>
                 <div className="flex items-center gap-4 mt-2">
@@ -167,10 +180,10 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
                   </span>
                   <span className="flex items-center gap-1 text-sm text-brand-gray500">
                     <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                    {item.rating_avg} ({item.rating_count} reviews)
+                    {item.rating_avg} ({item.rating_count} {t('itemDetail.reviews')})
                   </span>
                   <span className="flex items-center gap-1 text-sm text-brand-gray500">
-                    <Eye className="w-4 h-4" /> {item.view_count} views
+                    <Eye className="w-4 h-4" /> {item.view_count} {t('itemDetail.views')}
                   </span>
                 </div>
               </div>
@@ -190,7 +203,7 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
           {/* Description */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
             className="card p-6">
-            <h3 className="font-semibold mb-3">Description</h3>
+            <h3 className="font-semibold mb-3">{t('list.description')}</h3>
             <div className="text-sm text-brand-gray600 leading-relaxed whitespace-pre-line">
               {item.description}
             </div>
@@ -199,7 +212,7 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
           {/* Attributes */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
             className="card p-6">
-            <h3 className="font-semibold mb-3">Specifications</h3>
+            <h3 className="font-semibold mb-3">{t('itemDetail.specifications')}</h3>
             <div className="grid grid-cols-2 gap-3">
               {item.attributes && Object.entries(item.attributes).map(([key, val]) => (
                 <div key={key} className="flex justify-between text-sm py-2 border-b border-brand-gray100 last:border-0">
@@ -225,7 +238,7 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
           {/* Provider Card */}
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
             className="card p-6">
-            <h3 className="font-semibold mb-4">Listed by</h3>
+            <h3 className="font-semibold mb-4">{t('itemDetail.listedBy')}</h3>
             <div className="flex items-center gap-4">
               <Avatar fallback={item.provider.full_name} size="xl" />
               <div className="flex-1">
@@ -244,11 +257,11 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
                   </span>
                 </div>
                 <p className="text-xs text-brand-gray400 mt-1">
-                  Member since {new Date(item.provider.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                  {t('profile.memberSince')} {new Date(item.provider.created_at).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
                 </p>
               </div>
               <Button variant="secondary" size="sm">
-                <MessageSquare className="w-4 h-4" /> Message
+                <MessageSquare className="w-4 h-4" /> {t('itemDetail.message')}
               </Button>
             </div>
           </motion.div>
@@ -263,11 +276,11 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
               <div className="mb-4">
                 <div className="flex items-baseline gap-1">
                   <span className="text-3xl font-bold">ETB {item.price_per_day_etb.toLocaleString()}</span>
-                  <span className="text-brand-gray400 text-sm">/day</span>
+                  <span className="text-brand-gray400 text-sm">{t('items.perDay')}</span>
                 </div>
                 {item.price_per_week_etb && (
                   <p className="text-sm text-brand-gray500 mt-1">
-                    ETB {item.price_per_week_etb.toLocaleString()}/week
+                    ETB {item.price_per_week_etb.toLocaleString()}{t('itemDetail.perWeek')}
                   </p>
                 )}
               </div>
@@ -278,7 +291,7 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
               <div className="mb-4">
                 <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-brand-gray500" />
-                  Select Dates
+                  {t('itemDetail.selectDates')}
                 </h4>
                 <AvailabilityCalendar
                   bookedDates={bookedDates}
@@ -294,20 +307,20 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
                   className="space-y-2 mb-4 p-3 bg-brand-gray50 rounded-lg">
                   <div className="flex justify-between text-sm">
                     <span className="text-brand-gray500">
-                      ETB {item.price_per_day_etb.toLocaleString()} × {rentalDays} days
+                      ETB {item.price_per_day_etb.toLocaleString()} × {rentalDays} {rentalDays === 1 ? t('list.dailyRate') : t('itemDetail.views')}
                     </span>
                     <span className="font-medium">ETB {totalPrice.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-brand-gray500">Security deposit</span>
+                    <span className="text-brand-gray500">{t('itemDetail.securityDeposit')}</span>
                     <span className="font-medium">ETB {item.security_deposit_etb.toLocaleString()}</span>
                   </div>
                   <div className="divider" />
                   <div className="flex justify-between text-sm font-bold">
-                    <span>Total</span>
+                    <span>{t('itemDetail.total')}</span>
                     <span>ETB {(totalPrice + item.security_deposit_etb).toLocaleString()}</span>
                   </div>
-                  <p className="text-xs text-brand-gray400">Deposit refunded on safe return</p>
+                  <p className="text-xs text-brand-gray400">{t('itemDetail.depositRefundedMsg')}</p>
                 </motion.div>
               )}
 
@@ -318,12 +331,12 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
                 onClick={handleBooking}
                 isLoading={isBooking}
               >
-                {rentalDays > 0 ? 'Proceed to Checkout' : 'Select dates to rent'}
+                {rentalDays > 0 ? t('itemDetail.proceedToCheckout') : t('itemDetail.selectDatesToRent')}
               </Button>
 
               <div className="flex items-center gap-2 justify-center mt-3 text-xs text-brand-gray400">
                 <Shield className="w-3.5 h-3.5" />
-                Protected by Smart Escrow
+                {t('itemDetail.protectedByEscrow')}
               </div>
             </motion.div>
 
@@ -332,17 +345,17 @@ export default function ItemDetailPage({ params }: { params: { id: string } }) {
               <div className="flex items-center gap-3 text-sm">
                 <Clock className="w-4 h-4 text-brand-gray400" />
                 <span className="text-brand-gray600">
-                  Min {item.min_rental_days} day{item.min_rental_days > 1 ? 's' : ''}
-                  {item.max_rental_days && ` • Max ${item.max_rental_days} days`}
+                  {t('itemDetail.minRentalDays')}: {item.min_rental_days} {item.min_rental_days > 1 ? t('itemDetail.views') : t('list.dailyRate')}
+                  {item.max_rental_days && ` • ${t('itemDetail.maxRentalDays')}: ${item.max_rental_days}`}
                 </span>
               </div>
               <div className="flex items-center gap-3 text-sm">
                 <Shield className="w-4 h-4 text-brand-gray400" />
-                <span className="text-brand-gray600">Deposit: ETB {item.security_deposit_etb.toLocaleString()}</span>
+                <span className="text-brand-gray600">{t('list.securityDeposit')}: ETB {item.security_deposit_etb.toLocaleString()}</span>
               </div>
               <div className="flex items-center gap-3 text-sm">
                 <Tag className="w-4 h-4 text-brand-gray400" />
-                <span className="text-brand-gray600">{item.rental_count} successful rentals</span>
+                <span className="text-brand-gray600">{item.rental_count} {t('itemDetail.successfulRentals')}</span>
               </div>
             </div>
           </div>

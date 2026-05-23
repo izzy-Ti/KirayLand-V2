@@ -4,8 +4,11 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { ShieldCheck, ArrowRight } from 'lucide-react'
 import Button from '@/components/ui/Button'
+import { useLanguage } from '@/lib/context/LanguageContext'
+import type { EmailOtpType } from '@supabase/supabase-js'
 
 export default function VerifyPage() {
+  const { t } = useLanguage()
   const [code, setCode] = React.useState(['', '', '', '', '', ''])
   const [isLoading, setIsLoading] = React.useState(false)
   const [error, setError] = React.useState('')
@@ -45,18 +48,25 @@ export default function VerifyPage() {
   const handleVerify = async () => {
     const fullCode = code.join('')
     if (fullCode.length !== 6) {
-      setError('Please enter the full 6-digit code')
+      setError(t('verify.subtitle'))
       return
     }
     setError('')
     setIsLoading(true)
     try {
-      // Get email from URL params or session
       const params = new URLSearchParams(window.location.search)
       const email = params.get('email') || ''
+      const rawType = params.get('type') || 'signup'
+      const verifyType = (rawType === 'recovery' ? 'recovery' : 'signup') as EmailOtpType
+      
       const { verifyOtp } = await import('@/lib/auth/supabase-auth')
-      await verifyOtp(email, fullCode)
-      window.location.href = '/?verified=true'
+      await verifyOtp(email, fullCode, verifyType)
+      
+      if (verifyType === 'recovery') {
+        window.location.href = `/reset-password?verified=true&email=${encodeURIComponent(email)}`
+      } else {
+        window.location.href = '/?verified=true'
+      }
     } catch (err: any) {
       setError(err?.message || 'Invalid verification code')
     } finally {
@@ -70,9 +80,9 @@ export default function VerifyPage() {
         <ShieldCheck className="w-7 h-7 text-brand-black" />
       </div>
 
-      <h2 className="text-2xl font-bold tracking-tight">Verify your email</h2>
+      <h2 className="text-2xl font-bold tracking-tight">{t('verify.title')}</h2>
       <p className="text-sm text-brand-gray500 mt-1 max-w-sm mx-auto">
-        Enter the 6-digit code we sent to your email address
+        {t('verify.subtitle')}
       </p>
 
       {error && (
@@ -109,13 +119,13 @@ export default function VerifyPage() {
 
       <div className="mt-8">
         <Button onClick={handleVerify} className="w-full max-w-xs mx-auto" isLoading={isLoading}>
-          Verify Email <ArrowRight className="w-4 h-4" />
+          {t('verify.btnText')} <ArrowRight className="w-4 h-4" />
         </Button>
       </div>
 
       <p className="mt-4 text-xs text-brand-gray400">
-        Didn&apos;t receive the code?{' '}
-        <button className="text-brand-black font-medium hover:underline">Resend</button>
+        {t('verify.didNotReceive')}{' '}
+        <button className="text-brand-black font-medium hover:underline">{t('verify.resend')}</button>
       </p>
     </motion.div>
   )

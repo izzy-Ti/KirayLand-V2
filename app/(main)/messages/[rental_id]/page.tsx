@@ -5,8 +5,10 @@ import { ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import ChatRoom from '@/components/chat/ChatRoom'
 import { getSupabaseBrowserClient } from '@/lib/supabase'
+import { useLanguage } from '@/lib/context/LanguageContext'
 
 export default function ChatPage({ params }: { params: { rental_id: string } }) {
+  const { language } = useLanguage()
   const [currentUserId, setCurrentUserId] = React.useState<string | null>(null)
   const [otherUser, setOtherUser] = React.useState<{ full_name: string; avatar_url?: string | null } | null>(null)
   const [isLoading, setIsLoading] = React.useState(true)
@@ -55,7 +57,7 @@ export default function ChatPage({ params }: { params: { rental_id: string } }) 
     <div className="page-container py-6">
       <Link href={`/rentals/${params.rental_id}`}
         className="inline-flex items-center gap-1 text-sm text-brand-gray500 hover:text-brand-black mb-4 transition-colors">
-        <ArrowLeft className="w-4 h-4" /> Back to Rental
+        <ArrowLeft className="w-4 h-4" /> {language === 'am' ? 'ወደ ኪራይ ይመለሱ' : language === 'om' ? 'Gara kiraayitti deebi\'i' : 'Back to Rental'}
       </Link>
 
       <ChatRoom

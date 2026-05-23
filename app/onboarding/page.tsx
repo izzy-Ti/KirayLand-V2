@@ -6,12 +6,14 @@ import { getSupabaseBrowserClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Button from '@/components/ui/Button'
 import { MapPin, Phone, User, FileText } from 'lucide-react'
+import { useLanguage } from '@/lib/context/LanguageContext'
 
 export default function OnboardingPage() {
+  const { t } = useLanguage()
   const [isLoading, setIsLoading] = React.useState(false)
   const [error, setError] = React.useState('')
   const router = useRouter()
-  
+
   const [formData, setFormData] = React.useState({
     full_name: '',
     phone: '',
@@ -20,14 +22,18 @@ export default function OnboardingPage() {
   })
 
   React.useEffect(() => {
-    // Pre-fill full_name if available from Google
     getSupabaseBrowserClient().auth.getUser().then(({ data: { user } }) => {
       if (user) {
-        getSupabaseBrowserClient().from('profiles').select('full_name').eq('id', user.id).single().then(({ data }) => {
-          if (data?.full_name) {
-            setFormData(prev => ({ ...prev, full_name: data.full_name }))
-          }
-        })
+        getSupabaseBrowserClient()
+          .from('profiles')
+          .select('full_name')
+          .eq('id', user.id)
+          .single()
+          .then(({ data }) => {
+            if (data?.full_name) {
+              setFormData(prev => ({ ...prev, full_name: data.full_name }))
+            }
+          })
       }
     })
   }, [])
@@ -35,18 +41,16 @@ export default function OnboardingPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.full_name || !formData.phone || !formData.city) {
-      setError('Please fill out all required fields.')
+      setError(t('onboarding.fillAllFields'))
       return
     }
-    
     setIsLoading(true)
     setError('')
-    
     try {
       const supabase = getSupabaseBrowserClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not logged in')
-      
+
       const { error: updateError } = await supabase
         .from('profiles')
         .upsert({
@@ -58,13 +62,10 @@ export default function OnboardingPage() {
           bio: formData.bio || '',
           updated_at: new Date().toISOString()
         })
-        
       if (updateError) throw updateError
-      
-      // Successfully onboarded, go to home
       window.location.href = '/'
     } catch (err: any) {
-      setError(err.message || 'An error occurred during onboarding')
+      setError(err.message || t('common.error'))
     } finally {
       setIsLoading(false)
     }
@@ -72,7 +73,7 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-brand-white flex items-center justify-center p-4">
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="max-w-md w-full bg-white border border-brand-gray200 rounded-2xl p-8 shadow-card-xl"
@@ -81,10 +82,8 @@ export default function OnboardingPage() {
           <div className="w-12 h-12 bg-brand-black text-white rounded-xl flex items-center justify-center mx-auto mb-4 font-bold text-xl">
             ኪ
           </div>
-          <h1 className="text-2xl font-bold text-brand-black tracking-tight">Complete Your Profile</h1>
-          <p className="text-brand-gray500 text-sm mt-2">
-            Just a few more details so people can trust you and contact you for rentals.
-          </p>
+          <h1 className="text-2xl font-bold text-brand-black tracking-tight">{t('onboarding.title')}</h1>
+          <p className="text-brand-gray500 text-sm mt-2">{t('onboarding.subtitle')}</p>
         </div>
 
         {error && (
@@ -95,7 +94,9 @@ export default function OnboardingPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-brand-gray600 mb-1">Full Name *</label>
+            <label className="block text-sm font-medium text-brand-gray600 mb-1">
+              {t('onboarding.fullNameRequired')}
+            </label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-gray400" />
               <input
@@ -110,7 +111,9 @@ export default function OnboardingPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-brand-gray600 mb-1">Phone Number *</label>
+            <label className="block text-sm font-medium text-brand-gray600 mb-1">
+              {t('onboarding.phoneRequired')}
+            </label>
             <div className="relative">
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-gray400" />
               <input
@@ -125,7 +128,9 @@ export default function OnboardingPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-brand-gray600 mb-1">City *</label>
+            <label className="block text-sm font-medium text-brand-gray600 mb-1">
+              {t('onboarding.cityRequired')}
+            </label>
             <div className="relative">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-gray400" />
               <input
@@ -140,20 +145,22 @@ export default function OnboardingPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-brand-gray600 mb-1">Bio (Optional)</label>
+            <label className="block text-sm font-medium text-brand-gray600 mb-1">
+              {t('onboarding.bio')}
+            </label>
             <div className="relative">
               <FileText className="absolute left-3 top-3 w-4 h-4 text-brand-gray400" />
               <textarea
                 value={formData.bio}
                 onChange={e => setFormData(p => ({ ...p, bio: e.target.value }))}
                 className="input-base pl-10 h-24 resize-none py-2.5"
-                placeholder="Tell others a bit about yourself..."
+                placeholder={t('onboarding.bioPlaceholder')}
               />
             </div>
           </div>
 
           <Button type="submit" className="w-full mt-6" isLoading={isLoading}>
-            Complete Profile
+            {t('onboarding.btn')}
           </Button>
         </form>
       </motion.div>

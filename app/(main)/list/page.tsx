@@ -9,42 +9,23 @@ import {
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import { getSupabaseBrowserClient } from '@/lib/supabase'
-
-const STEPS = [
-  { id: 'basics', label: 'Basics', icon: Package },
-  { id: 'pricing', label: 'Pricing', icon: DollarSign },
-  { id: 'images', label: 'Images', icon: ImageIcon },
-  { id: 'location', label: 'Location', icon: MapPin },
-]
-
-
+import { useLanguage } from '@/lib/context/LanguageContext'
 
 export default function ListItemPage() {
+  const { t } = useLanguage()
+
+  const STEPS = [
+    { id: 'basics',   label: t('list.stepBasics'),   icon: Package },
+    { id: 'pricing',  label: t('list.stepPricing'),  icon: DollarSign },
+    { id: 'images',   label: t('list.stepImages'),   icon: ImageIcon },
+    { id: 'location', label: t('list.stepLocation'), icon: MapPin },
+  ]
+
   const [categories, setCategories] = React.useState<any[]>([])
-
-  React.useEffect(() => {
-    async function loadCategories() {
-      const { data } = await getSupabaseBrowserClient()
-        .from('categories')
-        .select('*')
-        .order('sort_order', { ascending: true })
-      
-      if (data) {
-        const root = data.filter(c => c.parent_id === null).map(c => ({
-          ...c,
-          children: data.filter(sub => sub.parent_id === c.id)
-        }))
-        setCategories(root)
-      }
-    }
-    loadCategories()
-  }, [])
-
   const [step, setStep] = React.useState(0)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [previewImages, setPreviewImages] = React.useState<string[]>([])
 
-  // Form state
   const [form, setForm] = React.useState({
     title: '',
     description: '',
@@ -65,9 +46,25 @@ export default function ListItemPage() {
 
   const [tagInput, setTagInput] = React.useState('')
 
-  const updateForm = (field: string, value: string) => {
+  React.useEffect(() => {
+    async function loadCategories() {
+      const { data } = await getSupabaseBrowserClient()
+        .from('categories')
+        .select('*')
+        .order('sort_order', { ascending: true })
+      if (data) {
+        const root = data.filter(c => c.parent_id === null).map(c => ({
+          ...c,
+          children: data.filter(sub => sub.parent_id === c.id)
+        }))
+        setCategories(root)
+      }
+    }
+    loadCategories()
+  }, [])
+
+  const updateForm = (field: string, value: string) =>
     setForm(prev => ({ ...prev, [field]: value }))
-  }
 
   const addTag = () => {
     if (tagInput.trim() && !form.tags.includes(tagInput.trim())) {
@@ -76,26 +73,21 @@ export default function ListItemPage() {
     }
   }
 
-  const removeTag = (tag: string) => {
+  const removeTag = (tag: string) =>
     setForm(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tag) }))
-  }
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files) return
-
     Array.from(files).forEach(file => {
       const reader = new FileReader()
-      reader.onload = () => {
-        setPreviewImages(prev => [...prev, reader.result as string])
-      }
+      reader.onload = () => setPreviewImages(prev => [...prev, reader.result as string])
       reader.readAsDataURL(file)
     })
   }
 
-  const removeImage = (index: number) => {
+  const removeImage = (index: number) =>
     setPreviewImages(prev => prev.filter((_, i) => i !== index))
-  }
 
   const selectedCategory = categories.find(c => c.id === form.categoryId)
 
@@ -104,12 +96,8 @@ export default function ListItemPage() {
     try {
       const supabase = getSupabaseBrowserClient()
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        window.location.href = '/login'
-        return
-      }
+      if (!user) { window.location.href = '/login'; return }
 
-      // Upload images to Supabase Storage
       const uploadedUrls: string[] = []
       for (let i = 0; i < previewImages.length; i++) {
         const dataUrl = previewImages[i]
@@ -126,15 +114,13 @@ export default function ListItemPage() {
         }
       }
 
-      // Require at least a category before saving
       const resolvedCategoryId = form.subcategoryId || form.categoryId
       if (!resolvedCategoryId) {
-        alert('Please select a category for your item.')
+        alert(t('list.selectCategoryAlert'))
         setIsSubmitting(false)
         return
       }
 
-      // Insert item record
       const { data: newItem, error } = await supabase.from('items').insert({
         provider_id: user.id,
         title: form.title,
@@ -161,14 +147,14 @@ export default function ListItemPage() {
 
       if (error) {
         console.error('Failed to list item:', error)
-        alert('Failed to publish listing. Please try again.')
+        alert(t('list.failedPublish'))
         return
       }
 
       window.location.href = `/items/${newItem.id}`
     } catch (err) {
       console.error(err)
-      alert('An unexpected error occurred.')
+      alert(t('list.unexpectedError'))
     } finally {
       setIsSubmitting(false)
     }
@@ -177,8 +163,8 @@ export default function ListItemPage() {
   return (
     <div className="page-container py-8 max-w-3xl mx-auto">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-bold tracking-tight">List an Item</h1>
-        <p className="text-sm text-brand-gray500 mt-1">Share your items and start earning</p>
+        <h1 className="text-2xl font-bold tracking-tight">{t('list.title')}</h1>
+        <p className="text-sm text-brand-gray500 mt-1">{t('list.subtitle')}</p>
       </motion.div>
 
       {/* Step indicator */}
@@ -215,38 +201,39 @@ export default function ListItemPage() {
           transition={{ duration: 0.25 }}
           className="card p-6 space-y-5"
         >
+          {/* ── STEP 0: Basics ─────────────────── */}
           {step === 0 && (
             <>
-              <h3 className="font-semibold">Basic Information</h3>
-              <Input label="Item Title" placeholder="e.g. iPhone 15 Pro Max — 256GB"
+              <h3 className="font-semibold">{t('list.basicInfo')}</h3>
+              <Input label={t('list.itemTitle')} placeholder="e.g. iPhone 15 Pro Max — 256GB"
                 value={form.title} onChange={e => updateForm('title', e.target.value)} required />
 
               <div>
-                <label className="block text-sm font-medium text-brand-gray700 mb-1.5">Description</label>
+                <label className="block text-sm font-medium text-brand-gray700 mb-1.5">{t('list.description')}</label>
                 <textarea
                   value={form.description}
                   onChange={e => updateForm('description', e.target.value)}
                   rows={4}
-                  placeholder="Describe your item, its condition, what's included..."
+                  placeholder={t('list.descriptionPlaceholder')}
                   className="input-base resize-none"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-brand-gray700 mb-1.5">Category</label>
+                  <label className="block text-sm font-medium text-brand-gray700 mb-1.5">{t('list.category')}</label>
                   <select value={form.categoryId} onChange={e => updateForm('categoryId', e.target.value)}
                     className="input-base">
-                    <option value="">Select category</option>
+                    <option value="">{t('list.selectCategory')}</option>
                     {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
                 {selectedCategory && selectedCategory.children.length > 0 && (
                   <div>
-                    <label className="block text-sm font-medium text-brand-gray700 mb-1.5">Subcategory</label>
+                    <label className="block text-sm font-medium text-brand-gray700 mb-1.5">{t('list.subcategory')}</label>
                     <select value={form.subcategoryId} onChange={e => updateForm('subcategoryId', e.target.value)}
                       className="input-base">
-                      <option value="">Select subcategory</option>
+                      <option value="">{t('list.selectSubcategory')}</option>
                       {selectedCategory.children.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </div>
@@ -254,18 +241,18 @@ export default function ListItemPage() {
               </div>
 
               <div className="grid grid-cols-3 gap-4">
-                <Input label="Brand" placeholder="Apple" value={form.brand}
+                <Input label={t('list.brand')} placeholder="Apple" value={form.brand}
                   onChange={e => updateForm('brand', e.target.value)} />
-                <Input label="Model" placeholder="iPhone 15" value={form.model}
+                <Input label={t('list.model')} placeholder="iPhone 15" value={form.model}
                   onChange={e => updateForm('model', e.target.value)} />
                 <div>
-                  <label className="block text-sm font-medium text-brand-gray700 mb-1.5">Condition</label>
+                  <label className="block text-sm font-medium text-brand-gray700 mb-1.5">{t('list.condition')}</label>
                   <select value={form.condition} onChange={e => updateForm('condition', e.target.value)}
                     className="input-base">
-                    <option value="new">Brand New</option>
-                    <option value="like_new">Like New</option>
-                    <option value="good">Good</option>
-                    <option value="fair">Fair</option>
+                    <option value="new">{t('list.conditionNew')}</option>
+                    <option value="like_new">{t('list.conditionLikeNew')}</option>
+                    <option value="good">{t('list.conditionGood')}</option>
+                    <option value="fair">{t('list.conditionFair')}</option>
                   </select>
                 </div>
               </div>
@@ -273,12 +260,12 @@ export default function ListItemPage() {
               {/* Tags */}
               <div>
                 <label className="block text-sm font-medium text-brand-gray700 mb-1.5">
-                  <Tag className="w-3.5 h-3.5 inline mr-1" /> Tags
+                  <Tag className="w-3.5 h-3.5 inline mr-1" /> {t('list.tags')}
                 </label>
                 <div className="flex gap-2">
                   <input value={tagInput} onChange={e => setTagInput(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addTag())}
-                    placeholder="Add a tag..." className="input-base flex-1" />
+                    placeholder={t('list.addTag')} className="input-base flex-1" />
                   <Button variant="secondary" onClick={addTag} type="button">
                     <Plus className="w-4 h-4" />
                   </Button>
@@ -286,8 +273,7 @@ export default function ListItemPage() {
                 {form.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-2">
                     {form.tags.map(tag => (
-                      <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 bg-brand-gray100
-                        rounded-pill text-xs">
+                      <span key={tag} className="inline-flex items-center gap-1 px-2.5 py-1 bg-brand-gray100 rounded-pill text-xs">
                         {tag}
                         <button onClick={() => removeTag(tag)} className="text-brand-gray400 hover:text-danger">
                           <X className="w-3 h-3" />
@@ -300,22 +286,23 @@ export default function ListItemPage() {
             </>
           )}
 
+          {/* ── STEP 1: Pricing ────────────────── */}
           {step === 1 && (
             <>
-              <h3 className="font-semibold">Pricing (ETB)</h3>
+              <h3 className="font-semibold">{t('list.pricingTitle')}</h3>
               <div className="grid grid-cols-2 gap-4">
-                <Input label="Price per Day *" type="number" placeholder="850"
+                <Input label={t('list.pricePerDay')} type="number" placeholder="850"
                   value={form.pricePerDay} onChange={e => updateForm('pricePerDay', e.target.value)} required />
-                <Input label="Price per Week" type="number" placeholder="5000"
+                <Input label={t('list.pricePerWeek')} type="number" placeholder="5000"
                   value={form.pricePerWeek} onChange={e => updateForm('pricePerWeek', e.target.value)} />
               </div>
-              <Input label="Security Deposit *" type="number" placeholder="15000"
+              <Input label={t('list.securityDeposit')} type="number" placeholder="15000"
                 value={form.securityDeposit} onChange={e => updateForm('securityDeposit', e.target.value)}
-                helperText="Refundable deposit held in escrow during rental" required />
+                helperText={t('list.securityDepositHelper')} required />
               <div className="grid grid-cols-2 gap-4">
-                <Input label="Min Rental Days" type="number" value={form.minDays}
+                <Input label={t('list.minDays')} type="number" value={form.minDays}
                   onChange={e => updateForm('minDays', e.target.value)} />
-                <Input label="Max Rental Days" type="number" value={form.maxDays}
+                <Input label={t('list.maxDays')} type="number" value={form.maxDays}
                   onChange={e => updateForm('maxDays', e.target.value)} />
               </div>
 
@@ -323,19 +310,19 @@ export default function ListItemPage() {
               {form.pricePerDay && (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                   className="p-4 bg-green-50 border border-green-200 rounded-card">
-                  <h4 className="text-sm font-semibold text-green-800 mb-2">Earnings Preview</h4>
+                  <h4 className="text-sm font-semibold text-green-800 mb-2">{t('list.earningsPreview')}</h4>
                   <div className="space-y-1 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-green-600">Daily rate</span>
+                      <span className="text-green-600">{t('list.dailyRate')}</span>
                       <span className="font-medium">ETB {Number(form.pricePerDay).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-green-600">Platform fee (5%)</span>
+                      <span className="text-green-600">{t('list.platformFee')}</span>
                       <span>-ETB {(Number(form.pricePerDay) * 0.05).toFixed(0)}</span>
                     </div>
                     <div className="divider my-1" />
                     <div className="flex justify-between font-bold">
-                      <span className="text-green-800">You earn /day</span>
+                      <span className="text-green-800">{t('list.youEarn')}</span>
                       <span className="text-green-800">ETB {(Number(form.pricePerDay) * 0.95).toFixed(0)}</span>
                     </div>
                   </div>
@@ -344,23 +331,23 @@ export default function ListItemPage() {
             </>
           )}
 
+          {/* ── STEP 2: Images ─────────────────── */}
           {step === 2 && (
             <>
-              <h3 className="font-semibold">Photos</h3>
-              <p className="text-sm text-brand-gray500">Upload clear photos. First image becomes the cover.</p>
+              <h3 className="font-semibold">{t('list.photosTitle')}</h3>
+              <p className="text-sm text-brand-gray500">{t('list.photosSubtitle')}</p>
 
               <div className="grid grid-cols-3 gap-3">
                 {previewImages.map((img, i) => (
                   <div key={i} className="relative aspect-square bg-brand-gray100 rounded-card overflow-hidden group">
                     <img src={img} alt="" className="w-full h-full object-cover" />
                     <button onClick={() => removeImage(i)}
-                      className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full opacity-0
-                        group-hover:opacity-100 transition-opacity">
+                      className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
                       <X className="w-3 h-3" />
                     </button>
                     {i === 0 && (
                       <span className="absolute bottom-2 left-2 px-2 py-0.5 bg-brand-black text-white text-xs rounded">
-                        Cover
+                        {t('list.cover')}
                       </span>
                     )}
                   </div>
@@ -370,25 +357,26 @@ export default function ListItemPage() {
                   flex flex-col items-center justify-center cursor-pointer
                   hover:border-brand-black hover:bg-brand-gray50 transition-all">
                   <Upload className="w-6 h-6 text-brand-gray400 mb-1" />
-                  <span className="text-xs text-brand-gray500">Upload</span>
+                  <span className="text-xs text-brand-gray500">{t('list.upload')}</span>
                   <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
                 </label>
               </div>
             </>
           )}
 
+          {/* ── STEP 3: Location ───────────────── */}
           {step === 3 && (
             <>
-              <h3 className="font-semibold">Location</h3>
+              <h3 className="font-semibold">{t('list.locationTitle')}</h3>
               <div>
-                <label className="block text-sm font-medium text-brand-gray700 mb-1.5">City</label>
+                <label className="block text-sm font-medium text-brand-gray700 mb-1.5">{t('list.cityLabel')}</label>
                 <select value={form.city} onChange={e => updateForm('city', e.target.value)} className="input-base">
                   {['Addis Ababa', 'Dire Dawa', 'Bahir Dar', 'Hawassa', 'Mekelle', 'Jimma', 'Adama', 'Gondar'].map(c =>
                     <option key={c} value={c}>{c}</option>
                   )}
                 </select>
               </div>
-              <Input label="Address / Area" placeholder="Bole, near Edna Mall"
+              <Input label={t('list.addressArea')} placeholder="Bole, near Edna Mall"
                 value={form.address} onChange={e => updateForm('address', e.target.value)}
                 icon={<MapPin className="w-4 h-4" />} />
             </>
@@ -399,16 +387,16 @@ export default function ListItemPage() {
       {/* Navigation */}
       <div className="flex justify-between mt-6">
         <Button variant="ghost" onClick={() => setStep(Math.max(0, step - 1))} disabled={step === 0}>
-          <ArrowLeft className="w-4 h-4" /> Back
+          <ArrowLeft className="w-4 h-4" /> {t('list.back')}
         </Button>
 
         {step < STEPS.length - 1 ? (
           <Button onClick={() => setStep(step + 1)}>
-            Next <ArrowRight className="w-4 h-4" />
+            {t('list.next')} <ArrowRight className="w-4 h-4" />
           </Button>
         ) : (
           <Button onClick={handleSubmit} isLoading={isSubmitting}>
-            Publish Listing <Check className="w-4 h-4" />
+            {t('list.publishListing')} <Check className="w-4 h-4" />
           </Button>
         )}
       </div>

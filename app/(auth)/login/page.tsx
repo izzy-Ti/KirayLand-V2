@@ -3,11 +3,13 @@
 import React from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
+import { useLanguage } from '@/lib/context/LanguageContext'
 
 export default function LoginPage() {
+  const { t } = useLanguage()
   const [email, setEmail] = React.useState('')
   const [password, setPassword] = React.useState('')
   const [showPassword, setShowPassword] = React.useState(false)
@@ -20,7 +22,6 @@ export default function LoginPage() {
     setError('')
     setIsLoading(true)
     try {
-      // Dynamic import to avoid SSR issues
       const { signInWithEmail } = await import('@/lib/auth/supabase-auth')
       await signInWithEmail(email, password)
       window.location.href = '/'
@@ -56,9 +57,9 @@ export default function LoginPage() {
         <span className="font-bold text-xl tracking-tight">ኪራይLand</span>
       </div>
 
-      <h2 className="text-2xl font-bold tracking-tight">Welcome back</h2>
+      <h2 className="text-2xl font-bold tracking-tight">{t('auth.signInTitle')}</h2>
       <p className="text-sm text-brand-gray500 mt-1">
-        Sign in to your account to continue
+        {t('auth.signInSubtitle')}
       </p>
 
       {/* Error Alert */}
@@ -99,21 +100,21 @@ export default function LoginPage() {
               fill="#EA4335"
             />
           </svg>
-          Continue with Google
+          {t('auth.googleAuth')}
         </Button>
       </div>
 
       {/* Divider */}
       <div className="flex items-center gap-3 my-6">
         <div className="flex-1 h-px bg-brand-gray200" />
-        <span className="text-xs text-brand-gray400 font-medium">OR</span>
+        <span className="text-xs text-brand-gray400 font-medium">{t('auth.or')}</span>
         <div className="flex-1 h-px bg-brand-gray200" />
       </div>
 
       {/* Email Form */}
       <form onSubmit={handleEmailLogin} className="space-y-4">
         <Input
-          label="Email"
+          label={t('auth.email')}
           type="email"
           placeholder="you@example.com"
           value={email}
@@ -124,7 +125,7 @@ export default function LoginPage() {
 
         <div className="relative">
           <Input
-            label="Password"
+            label={t('auth.password')}
             type={showPassword ? 'text' : 'password'}
             placeholder="••••••••"
             value={password}
@@ -142,15 +143,12 @@ export default function LoginPage() {
         </div>
 
         <div className="flex items-center justify-between">
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input type="checkbox" className="w-4 h-4 rounded border-brand-gray300 text-brand-black focus:ring-brand-black" />
-            <span className="text-sm text-brand-gray500">Remember me</span>
-          </label>
+          <div />
           <Link
             href="/reset-password"
             className="text-sm font-medium text-brand-black hover:text-brand-gray600 transition-colors"
           >
-            Forgot password?
+            {t('auth.forgotPassword')}
           </Link>
         </div>
 
@@ -160,15 +158,15 @@ export default function LoginPage() {
           isLoading={isLoading}
           disabled={isGoogleLoading}
         >
-          Sign In
+          {t('auth.loginBtn')}
           <ArrowRight className="w-4 h-4" />
         </Button>
       </form>
 
       <p className="mt-6 text-center text-sm text-brand-gray500">
-        Don&apos;t have an account?{' '}
+        {t('auth.dontHaveAccount')}{' '}
         <Link href="/register" className="font-semibold text-brand-black hover:text-brand-gray600 transition-colors">
-          Sign Up
+          {t('nav.signUp')}
         </Link>
       </p>
     </motion.div>

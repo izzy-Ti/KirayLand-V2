@@ -75,12 +75,14 @@ export async function sendOtp(email: string) {
   return data
 }
 
+import type { EmailOtpType } from '@supabase/supabase-js'
+
 // ── Verify OTP ─────────────────────────────────────────────
-export async function verifyOtp(email: string, token: string) {
+export async function verifyOtp(email: string, token: string, type: EmailOtpType = 'email') {
   const { data, error } = await supabase.auth.verifyOtp({
     email,
     token,
-    type: 'email',
+    type,
   })
 
   if (error) throw error

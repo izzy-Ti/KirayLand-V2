@@ -7,6 +7,7 @@ import Link from 'next/link'
 import Badge from '@/components/ui/Badge'
 import { getSupabaseBrowserClient } from '@/lib/supabase'
 import type { RentalStatus } from '@/types/database'
+import { useLanguage } from '@/lib/context/LanguageContext'
 
 interface RentalRow {
   id: string
@@ -21,21 +22,23 @@ interface RentalRow {
   consumer: { full_name: string } | null
 }
 
-const STATUS_BADGE: Record<RentalStatus, { variant: 'warning' | 'info' | 'success' | 'danger' | 'neutral'; label: string }> = {
-  pending:                { variant: 'warning', label: 'Pending Payment' },
-  active_escrow:          { variant: 'info',    label: 'Funds Escrowed' },
-  item_delivered:         { variant: 'info',    label: 'Item Delivered' },
-  returned_pending_review:{ variant: 'warning', label: 'Return Pending' },
-  completed:              { variant: 'success', label: 'Completed' },
-  disputed:               { variant: 'danger',  label: 'Disputed' },
-  cancelled:              { variant: 'neutral', label: 'Cancelled' },
-}
-
 export default function RentalsPage() {
+  const { t } = useLanguage()
   const [rentals, setRentals] = React.useState<RentalRow[]>([])
   const [isLoading, setIsLoading] = React.useState(true)
   const [tab, setTab] = React.useState<'all' | 'as_consumer' | 'as_provider'>('all')
   const [userId, setUserId] = React.useState<string | null>(null)
+
+  // Build STATUS_BADGE dynamically so labels are translated
+  const STATUS_BADGE: Record<RentalStatus, { variant: 'warning' | 'info' | 'success' | 'danger' | 'neutral'; label: string }> = {
+    pending:                 { variant: 'warning', label: t('rentals.statusPending') },
+    active_escrow:           { variant: 'info',    label: t('rentals.statusEscrow') },
+    item_delivered:          { variant: 'info',    label: t('rentals.statusDelivered') },
+    returned_pending_review: { variant: 'warning', label: t('rentals.statusReturnPending') },
+    completed:               { variant: 'success', label: t('rentals.statusCompleted') },
+    disputed:                { variant: 'danger',  label: t('rentals.statusDisputed') },
+    cancelled:               { variant: 'neutral', label: t('rentals.statusCancelled') },
+  }
 
   React.useEffect(() => {
     async function loadRentals() {
@@ -92,7 +95,7 @@ export default function RentalsPage() {
     return (
       <div className="page-container py-20 text-center">
         <div className="w-8 h-8 border-4 border-brand-black border-t-transparent rounded-full animate-spin mx-auto" />
-        <p className="text-sm text-brand-gray500 mt-4">Loading rentals...</p>
+        <p className="text-sm text-brand-gray500 mt-4">{t('rentals.loading')}</p>
       </div>
     )
   }
@@ -100,42 +103,29 @@ export default function RentalsPage() {
   return (
     <div className="page-container py-8 max-w-3xl mx-auto">
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-        <h1 className="text-2xl font-bold tracking-tight">My Rentals</h1>
-        <p className="text-sm text-brand-gray500 mt-1">Track all your active and past rentals</p>
+        <h1 className="text-2xl font-bold tracking-tight">{t('rentals.title')}</h1>
+        <p className="text-sm text-brand-gray500 mt-1">{t('rentals.subtitle')}</p>
       </motion.div>
 
       {rentals.length > 0 && (
         <div className="flex border-b border-brand-gray200 mt-6">
-          <button
-            onClick={() => setTab('all')}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px ${
-              tab === 'all'
-                ? 'border-brand-black text-brand-black font-semibold'
-                : 'border-transparent text-brand-gray500 hover:text-brand-black'
-            }`}
-          >
-            All Rentals
-          </button>
-          <button
-            onClick={() => setTab('as_consumer')}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px ${
-              tab === 'as_consumer'
-                ? 'border-brand-black text-brand-black font-semibold'
-                : 'border-transparent text-brand-gray500 hover:text-brand-black'
-            }`}
-          >
-            Rented by Me
-          </button>
-          <button
-            onClick={() => setTab('as_provider')}
-            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px ${
-              tab === 'as_provider'
-                ? 'border-brand-black text-brand-black font-semibold'
-                : 'border-transparent text-brand-gray500 hover:text-brand-black'
-            }`}
-          >
-            My Items Rented
-          </button>
+          {[
+            { key: 'all',         label: t('rentals.allRentals') },
+            { key: 'as_consumer', label: t('rentals.rentedByMe') },
+            { key: 'as_provider', label: t('rentals.myItemsRented') },
+          ].map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setTab(key as any)}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px ${
+                tab === key
+                  ? 'border-brand-black text-brand-black font-semibold'
+                  : 'border-transparent text-brand-gray500 hover:text-brand-black'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       )}
 
@@ -143,17 +133,17 @@ export default function RentalsPage() {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }}
           className="mt-12 text-center py-10 bg-brand-gray50 border border-brand-gray200 rounded-card">
           <Package className="w-12 h-12 text-brand-gray300 mx-auto mb-3" />
-          <h3 className="font-semibold text-brand-gray600">No rentals found</h3>
+          <h3 className="font-semibold text-brand-gray600">{t('rentals.noRentalsFound')}</h3>
           <p className="text-sm text-brand-gray400 mt-1 mb-4">
             {tab === 'all'
-              ? 'Browse items and make your first rental'
+              ? t('rentals.browseItemsMsg')
               : tab === 'as_consumer'
-              ? 'You have not rented any items yet'
-              : 'None of your listed items have been rented yet'}
+              ? t('rentals.notRentedYet')
+              : t('rentals.noItemsRented')}
           </p>
           {tab === 'all' && (
             <Link href="/" className="btn-primary inline-flex items-center gap-2 text-sm">
-              Browse Items <ArrowRight className="w-4 h-4" />
+              {t('rentals.browseItems')} <ArrowRight className="w-4 h-4" />
             </Link>
           )}
         </motion.div>
@@ -184,7 +174,7 @@ export default function RentalsPage() {
                   {/* Info */}
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm truncate group-hover:text-brand-gray700 transition-colors">
-                      {rental.item?.title ?? 'Unknown Item'}
+                      {rental.item?.title ?? t('rentals.unknownItem')}
                     </p>
                     <p className="text-xs text-brand-gray500 mt-0.5">
                       {rental.start_date} → {rental.end_date}
@@ -195,8 +185,8 @@ export default function RentalsPage() {
                       </span>
                       <span className="text-[10px] text-brand-gray400">
                         {rental.consumer_id === userId
-                          ? `Owner: ${rental.provider?.full_name ?? '—'}`
-                          : `Renter: ${rental.consumer?.full_name ?? '—'}`}
+                          ? `${t('rentals.owner')}: ${rental.provider?.full_name ?? '—'}`
+                          : `${t('rentals.renter')}: ${rental.consumer?.full_name ?? '—'}`}
                       </span>
                     </div>
                   </div>
