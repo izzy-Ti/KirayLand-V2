@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminSupabaseClient } from '@/lib/supabaseServer'
 import { stripe } from '@/lib/stripeServer'
+import { creditWalletTopupFromSession } from '@/lib/walletTopup'
 import Stripe from 'stripe'
 
 // IMPORTANT: Force dynamic so Next.js never caches or pre-processes this route
@@ -40,16 +41,34 @@ export async function POST(request: Request) {
   // Handle checkout.session.completed
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session
-    const rentalId = session.metadata?.rental_id
+    const metadata = session.metadata || {}
+    const supabaseAdmin = createAdminSupabaseClient()
+
+    if (metadata.type === 'wallet_topup') {
+      try {
+        const result = await creditWalletTopupFromSession(supabaseAdmin, session)
+        if (result.credited) {
+          console.log(
+            `[Stripe Webhook] Wallet top-up credited: user ${metadata.user_id}, +${result.amountEtb} ETB, balance ${result.newBalance} ETB ✓`
+          )
+        } else {
+          console.log(`[Stripe Webhook] Wallet top-up already processed for session ${session.id}`)
+        }
+      } catch (err: any) {
+        console.error('[Stripe Webhook] Wallet top-up failed:', err)
+        return NextResponse.json({ error: err.message || 'Wallet top-up failed' }, { status: 500 })
+      }
+      return NextResponse.json({ received: true })
+    }
+
+    const rentalId = metadata.rental_id
 
     if (!rentalId) {
-      console.warn('[Stripe Webhook] checkout.session.completed received without rental_id in metadata')
+      console.warn('[Stripe Webhook] checkout.session.completed received without rental_id or wallet_topup type')
       return NextResponse.json({ received: true })
     }
 
     console.log(`[Stripe Webhook] Processing payment for rental: ${rentalId}`)
-
-    const supabaseAdmin = createAdminSupabaseClient()
 
     // Fetch the current rental to verify state
     const { data: rental, error: fetchError } = await supabaseAdmin

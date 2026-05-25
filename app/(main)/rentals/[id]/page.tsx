@@ -83,16 +83,20 @@ export default function RentalDetailPage({ params }: { params: { id: string } })
 
   const handleCheckinVerify = async (code: string) => {
     try {
-      const supabase = getSupabaseBrowserClient()
-      const { error } = await supabase
-        .from('rentals')
-        .update({
-          status: 'item_delivered',
-          checkin_verified_at: new Date().toISOString()
-        })
-        .eq('id', rental.id)
+      const response = await fetch('/api/rentals/verify-handshake', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rentalId: rental.id, code, type: 'checkin' }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to verify check-in')
+      }
 
-      if (error) throw error
+      const payoutMsg = data.providerPayout
+        ? ` Provider has been credited ETB ${Number(data.providerPayout).toLocaleString('en-US', { minimumFractionDigits: 2 })}.`
+        : ''
+      alert(`Item receipt confirmed!${payoutMsg}`)
       await reloadData()
     } catch (err: any) {
       alert('Failed to verify check-in: ' + err.message)
@@ -101,16 +105,17 @@ export default function RentalDetailPage({ params }: { params: { id: string } })
 
   const handleCheckoutVerify = async (code: string) => {
     try {
-      const supabase = getSupabaseBrowserClient()
-      const { error } = await supabase
-        .from('rentals')
-        .update({
-          status: 'returned_pending_review',
-          checkout_verified_at: new Date().toISOString()
-        })
-        .eq('id', rental.id)
+      const response = await fetch('/api/rentals/verify-handshake', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rentalId: rental.id, code, type: 'checkout' }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to verify check-out')
+      }
 
-      if (error) throw error
+      alert('Return verified! Waiting for provider to confirm and release the security deposit.')
       await reloadData()
     } catch (err: any) {
       alert('Failed to verify check-out: ' + err.message)

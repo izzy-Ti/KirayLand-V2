@@ -43,7 +43,15 @@ export async function POST(request: Request) {
     const platformFee = Math.round(price * 0.05 * 100) / 100
     const providerPayout = Math.round((price - platformFee) * 100) / 100
 
-    // 3. Update Consumer (Renter) Wallet — Refund security deposit (if any)
+    const { count: existingPayoutCount } = await supabaseAdmin
+      .from('escrow_ledger')
+      .select('id', { count: 'exact', head: true })
+      .eq('rental_id', rentalId)
+      .eq('action', 'provider_payout_sent')
+
+    const providerAlreadyPaid = (existingPayoutCount ?? 0) > 0
+
+    // 3. Update Consumer Wallet — Refund security deposit (if any)
     if (deposit > 0) {
       const { data: consumerProfile, error: consumerError } = await supabaseAdmin
         .from('profiles')
@@ -60,22 +68,24 @@ export async function POST(request: Request) {
       }
     }
 
-    // 4. Update Provider Wallet — Payout rental fee (minus platform fee)
-    const { data: providerProfile, error: providerError } = await supabaseAdmin
-      .from('profiles')
-      .select('wallet_balance_etb')
-      .eq('id', rental.provider_id)
-      .single()
+    // 4. Provider payout is credited at check-in verification; skip if already paid
+    if (!providerAlreadyPaid) {
+      const { data: providerProfile, error: providerError } = await supabaseAdmin
+        .from('profiles')
+        .select('wallet_balance_etb')
+        .eq('id', rental.provider_id)
+        .single()
 
-    if (providerError || !providerProfile) {
-      return NextResponse.json({ error: 'Provider profile not found' }, { status: 404 })
+      if (providerError || !providerProfile) {
+        return NextResponse.json({ error: 'Provider profile not found' }, { status: 404 })
+      }
+
+      const providerBalance = Number(providerProfile.wallet_balance_etb || 0)
+      await supabaseAdmin
+        .from('profiles')
+        .update({ wallet_balance_etb: providerBalance + providerPayout })
+        .eq('id', rental.provider_id)
     }
-
-    const providerBalance = Number(providerProfile.wallet_balance_etb || 0)
-    await supabaseAdmin
-      .from('profiles')
-      .update({ wallet_balance_etb: providerBalance + providerPayout })
-      .eq('id', rental.provider_id)
 
     // 5. Update rental status
     const { error: updateError } = await supabaseAdmin
@@ -108,23 +118,26 @@ export async function POST(request: Request) {
         })
     }
 
-    // Provider payout sent
-    await supabaseAdmin
-      .from('escrow_ledger')
-      .insert({
-        rental_id: rentalId,
-        action: 'provider_payout_sent',
-        amount_usd: rental.provider_payout_usd,
-        amount_etb: providerPayout,
-        exchange_rate: rental.exchange_rate,
-        performed_by: user.id,
-        notes: `Released ${providerPayout} ETB (95% rental fee after platform fee) to provider wallet.`
-      })
+    if (!providerAlreadyPaid) {
+      await supabaseAdmin
+        .from('escrow_ledger')
+        .insert({
+          rental_id: rentalId,
+          action: 'provider_payout_sent',
+          amount_usd: rental.provider_payout_usd,
+          amount_etb: providerPayout,
+          exchange_rate: rental.exchange_rate,
+          performed_by: user.id,
+          notes: `Released ${providerPayout} ETB (95% rental fee after platform fee) to provider wallet on return confirmation.`,
+        })
+    }
 
     // 7. System Chat message
     const formattedDeposit = `ETB ${deposit.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
     const formattedPayout = `ETB ${providerPayout.toLocaleString('en-US', { minimumFractionDigits: 2 })}`
-    const sysMsg = `🎉 Escrow settled! Renter's refundable security deposit of ${formattedDeposit} has been returned to their Wallet. Provider's payout of ${formattedPayout} (rental fee minus 5% platform fee) has been credited to their Wallet.`
+    const sysMsg = providerAlreadyPaid
+      ? `🎉 Escrow settled! Consumer security deposit of ${formattedDeposit} has been returned to their wallet. Provider payout (${formattedPayout}) was already credited at item receipt.`
+      : `🎉 Escrow settled! Consumer security deposit of ${formattedDeposit} has been returned to their wallet. Provider payout of ${formattedPayout} (rental fee minus 5% platform fee) has been credited to their wallet.`
 
     await supabaseAdmin
       .from('messages')

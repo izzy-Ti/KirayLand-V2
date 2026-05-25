@@ -8,6 +8,7 @@ import {
   TrendingUp, RefreshCw
 } from 'lucide-react'
 import Link from 'next/link'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Modal from '@/components/ui/Modal'
@@ -25,6 +26,9 @@ interface VirtualTransaction {
 
 export default function WalletPage() {
   const { t, language } = useLanguage()
+  const searchParams = useSearchParams()
+  const router = useRouter()
+
   const [profile, setProfile] = React.useState<any>(null)
   const [dbTransactions, setDbTransactions] = React.useState<any[]>([])
   const [localTransactions, setLocalTransactions] = React.useState<VirtualTransaction[]>([])
@@ -37,6 +41,8 @@ export default function WalletPage() {
   const [amount, setAmount] = React.useState('')
   const [modalError, setModalError] = React.useState('')
   const [modalLoading, setModalLoading] = React.useState(false)
+  const [depositSuccessMsg, setDepositSuccessMsg] = React.useState('')
+  const depositConfirmRef = React.useRef<string | null>(null)
 
   // Load wallet details
   const loadWalletData = async (silent = false) => {
@@ -86,6 +92,53 @@ export default function WalletPage() {
     loadWalletData()
   }, [])
 
+  // Confirm Stripe wallet deposit after checkout (server verifies payment)
+  React.useEffect(() => {
+    const sessionId = searchParams.get('session_id')
+    if (!sessionId || depositConfirmRef.current === sessionId) return
+
+    depositConfirmRef.current = sessionId
+    router.replace('/profile/wallet')
+
+    ;(async () => {
+      try {
+        const res = await fetch('/api/wallet/confirm-deposit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId }),
+        })
+        const data = await res.json()
+
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to confirm deposit')
+        }
+
+        await loadWalletData(true)
+
+        if (data.credited && data.amountEtb) {
+          setDepositSuccessMsg(
+            language === 'am'
+              ? `እንኳን ደስ አለዎት! ብር ${Number(data.amountEtb).toLocaleString()} ዋሌትዎ ላይ ተጨምሯል።`
+              : `Success! ETB ${Number(data.amountEtb).toLocaleString()} has been added to your wallet after Stripe payment.`
+          )
+        } else if (data.success) {
+          setDepositSuccessMsg(
+            language === 'am'
+              ? 'የክፍያዎ ማረጋገጫ ተቀብሏል። ቀሪ ሂሳብዎ ተዘምኗል።'
+              : 'Your payment was confirmed. Your wallet balance has been updated.'
+          )
+        }
+      } catch (err: any) {
+        setDepositSuccessMsg(
+          language === 'am'
+            ? 'ክፍያው ተቀብሏል። ቀሪ ሂሳብ ለማየት Refresh ይጫኑ።'
+            : err.message || 'Payment received. Refresh to see your updated balance.'
+        )
+        await loadWalletData(true)
+      }
+    })()
+  }, [searchParams, router, language])
+
   // Handle virtual top-up or withdrawal
   const handleWalletAction = async (action: 'deposit' | 'withdraw') => {
     setModalError('')
@@ -109,18 +162,26 @@ export default function WalletPage() {
         throw new Error(data.error || 'Transaction failed')
       }
 
-      // Save top-up/withdrawal to localStorage to persist logs locally for this user
+      if (action === 'deposit') {
+        if (data.session_url) {
+          // Redirect to Stripe checkout screen
+          window.location.href = data.session_url
+          return
+        } else {
+          throw new Error('Stripe checkout URL was not returned')
+        }
+      }
+
+      // Withdraw: Save withdrawal to localStorage to persist logs locally for this user
       const supabase = getSupabaseBrowserClient()
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         const newTx: VirtualTransaction = {
           id: Math.random().toString(36).substring(2, 11),
-          action,
+          action: 'withdraw',
           amount_etb: numAmount,
           created_at: new Date().toISOString(),
-          notes: action === 'deposit' 
-            ? (language === 'am' ? 'ዋሌት መሙላት በተሳካ ሁኔታ ተጠናቋል' : 'Virtual Wallet Direct Deposit')
-            : (language === 'am' ? 'ከዋሌት ወጪ ተደርጓል' : 'Virtual Wallet Direct Withdrawal')
+          notes: language === 'am' ? 'ከዋሌት ወጪ ተደርጓል' : 'Virtual Wallet Direct Withdrawal'
         }
         const updatedLocal = [newTx, ...localTransactions]
         localStorage.setItem(`wallet_tx_${user.id}`, JSON.stringify(updatedLocal))
@@ -128,7 +189,6 @@ export default function WalletPage() {
       }
 
       setAmount('')
-      setIsDepositOpen(false)
       setIsWithdrawOpen(false)
       
       // Reload profile
@@ -136,7 +196,7 @@ export default function WalletPage() {
     } catch (err: any) {
       setModalError(err.message || 'Transaction failed.')
     } finally {
-      setModalLoading(false)
+      if (action !== 'deposit') setModalLoading(false)
     }
   }
 
@@ -243,6 +303,13 @@ export default function WalletPage() {
         className="inline-flex items-center gap-1.5 text-sm text-brand-gray500 hover:text-brand-black mb-6 transition-colors">
         <ArrowLeft className="w-4 h-4" /> {t('common.back')} {t('nav.profile')}
       </Link>
+
+      {depositSuccessMsg && (
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-card flex items-start gap-3">
+          <CheckCircle2 className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+          <p className="text-sm font-semibold text-green-800">{depositSuccessMsg}</p>
+        </div>
+      )}
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
