@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, Menu, X, User, MessageSquare, Package,
-  PlusCircle, LogOut, ChevronDown, Globe
+  PlusCircle, LogOut, ChevronDown, Globe, Wallet
 } from 'lucide-react'
 import { getSupabaseBrowserClient } from '@/lib/supabase'
 import { useLanguage } from '@/lib/context/LanguageContext'
@@ -193,6 +193,9 @@ export default function Navbar({ user: initialUser }: NavbarProps) {
                       <Link href="/profile" className="flex items-center gap-3 px-4 py-2.5 text-sm text-brand-gray600 hover:bg-brand-gray50 hover:text-brand-black transition-colors">
                         <User className="w-4 h-4" /> {t('nav.profile')}
                       </Link>
+                      <Link href="/profile/wallet" className="flex items-center gap-3 px-4 py-2.5 text-sm text-brand-gray600 hover:bg-brand-gray50 hover:text-brand-black transition-colors">
+                        <Wallet className="w-4 h-4" /> {t('nav.wallet')}
+                      </Link>
                       <Link href="/rentals" className="flex items-center gap-3 px-4 py-2.5 text-sm text-brand-gray600 hover:bg-brand-gray50 hover:text-brand-black transition-colors">
                         <Package className="w-4 h-4" /> {t('nav.myRentals')}
                       </Link>
@@ -282,6 +285,9 @@ export default function Navbar({ user: initialUser }: NavbarProps) {
                   </Link>
                   <Link href="/rentals" className="block px-4 py-3 text-sm font-medium rounded-input hover:bg-brand-gray50 transition-colors">
                     {t('nav.myRentals')}
+                  </Link>
+                  <Link href="/profile/wallet" className="block px-4 py-3 text-sm font-medium rounded-input hover:bg-brand-gray50 transition-colors">
+                    {t('nav.wallet')}
                   </Link>
                   <Link href="/profile" className="block px-4 py-3 text-sm font-medium rounded-input hover:bg-brand-gray50 transition-colors">
                     {t('nav.profile')}

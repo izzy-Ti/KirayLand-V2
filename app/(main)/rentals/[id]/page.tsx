@@ -16,6 +16,8 @@ export default function RentalDetailPage({ params }: { params: { id: string } })
   const [isProvider, setIsProvider] = React.useState(false)
   const [isLoading, setIsLoading] = React.useState(true)
   const [isCompletingPayment, setIsCompletingPayment] = React.useState(false)
+  const [walletBalance, setWalletBalance] = React.useState<number | null>(null)
+  const [isWalletPaying, setIsWalletPaying] = React.useState(false)
 
   React.useEffect(() => {
     async function loadData() {
@@ -35,6 +37,19 @@ export default function RentalDetailPage({ params }: { params: { id: string } })
 
       setRental(data)
       setIsProvider(user?.id === data.provider_id)
+
+      // Load user wallet balance if the user is the consumer and the rental is pending
+      if (user && user.id === data.consumer_id && data.status === 'pending') {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('wallet_balance_etb')
+          .eq('id', user.id)
+          .single()
+        if (profile) {
+          setWalletBalance(Number(profile.wallet_balance_etb || 0))
+        }
+      }
+
       setIsLoading(false)
     }
     loadData()
@@ -52,6 +67,17 @@ export default function RentalDetailPage({ params }: { params: { id: string } })
     if (!error && data) {
       setRental(data)
       setIsProvider(user?.id === data.provider_id)
+
+      if (user && user.id === data.consumer_id) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('wallet_balance_etb')
+          .eq('id', user.id)
+          .single()
+        if (profile) {
+          setWalletBalance(Number(profile.wallet_balance_etb || 0))
+        }
+      }
     }
   }
 
@@ -93,20 +119,57 @@ export default function RentalDetailPage({ params }: { params: { id: string } })
 
   const handleConfirmReturn = async () => {
     if (!window.confirm("Are you sure you want to confirm the safe return of the item and release escrow funds?")) return
+    setIsCompletingPayment(true)
     try {
-      const supabase = getSupabaseBrowserClient()
-      const { error } = await supabase
-        .from('rentals')
-        .update({
-          status: 'completed',
-          actual_return_date: new Date().toISOString().split('T')[0]
-        })
-        .eq('id', rental.id)
+      const response = await fetch('/api/wallet/release-escrow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rentalId: rental.id })
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to release escrow')
+      }
 
-      if (error) throw error
+      alert('Return confirmed! Escrow funds have been successfully released and security deposit refunded.')
       await reloadData()
     } catch (err: any) {
       alert('Failed to confirm return: ' + err.message)
+    } finally {
+      setIsCompletingPayment(false)
+    }
+  }
+
+  const handleWalletPayment = async () => {
+    const totalRequired = Number(rental.total_price_etb || 0) + Number(rental.security_deposit_etb || 0)
+
+    if (walletBalance === null || walletBalance < totalRequired) {
+      alert('Insufficient wallet balance to pay for this rental.')
+      return
+    }
+
+    if (!window.confirm(`Are you sure you want to pay ETB ${totalRequired.toLocaleString('en-US', { minimumFractionDigits: 2 })} for this rental using your virtual wallet balance?`)) {
+      return
+    }
+
+    setIsWalletPaying(true)
+    try {
+      const response = await fetch('/api/wallet/pay-rental', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rentalId: rental.id })
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to pay with wallet')
+      }
+
+      alert('Payment successful! Rental status updated to Escrow.')
+      await reloadData()
+    } catch (err: any) {
+      alert('Failed to pay with wallet: ' + err.message)
+    } finally {
+      setIsWalletPaying(false)
     }
   }
 
@@ -266,9 +329,40 @@ export default function RentalDetailPage({ params }: { params: { id: string } })
               <h4 className="font-semibold text-sm">Actions</h4>
 
               {rental.status === 'pending' && !isProvider && (
-                <Button className="w-full" variant="primary" onClick={handleCompletePayment} isLoading={isCompletingPayment}>
-                  Complete Payment (Pay with Stripe)
-                </Button>
+                <div className="space-y-3">
+                  <Button
+                    className="w-full py-2.5 justify-center text-sm font-semibold"
+                    variant="primary"
+                    onClick={handleWalletPayment}
+                    isLoading={isWalletPaying}
+                    disabled={walletBalance !== null && walletBalance < (Number(rental.total_price_etb) + Number(rental.security_deposit_etb))}
+                  >
+                    Pay with Virtual Wallet
+                  </Button>
+
+                  {walletBalance !== null && (
+                    <div className="text-center p-2.5 bg-brand-gray50 rounded-lg border border-brand-gray200 text-xs">
+                      <p className="text-brand-gray500">Your Wallet Balance: <span className="font-mono font-bold text-brand-black">ETB {walletBalance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span></p>
+                      {walletBalance < (Number(rental.total_price_etb) + Number(rental.security_deposit_etb)) ? (
+                        <p className="text-danger font-semibold mt-1 flex items-center justify-center gap-1">
+                          <AlertTriangle className="w-3 h-3" /> Insufficient balance. <Link href="/profile/wallet" className="underline text-blue-600 hover:text-blue-800">Top Up Wallet</Link>
+                        </p>
+                      ) : (
+                        <p className="text-green-600 font-semibold mt-1">✓ Balance is sufficient</p>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-center gap-2 py-1">
+                    <span className="h-px bg-brand-gray200 flex-1"></span>
+                    <span className="text-[10px] uppercase font-bold text-brand-gray400 tracking-wider">or</span>
+                    <span className="h-px bg-brand-gray200 flex-1"></span>
+                  </div>
+
+                  <Button className="w-full justify-center text-xs text-brand-gray600 hover:text-brand-black" variant="secondary" onClick={handleCompletePayment} isLoading={isCompletingPayment}>
+                    Complete Payment (Pay with Stripe)
+                  </Button>
+                </div>
               )}
 
               {rental.status === 'returned_pending_review' && isProvider && (
